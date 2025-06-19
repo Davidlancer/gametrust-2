@@ -5,7 +5,7 @@ import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 // Add to package.json: "axios": "^1.x.x"
 // Run: npm install axios @types/axios
-import axios from 'axios';
+  import axios from 'axios';
 
 const ListingDetailsPage = () => {
   const { listingId } = useParams();
@@ -43,11 +43,13 @@ const ListingDetailsPage = () => {
     };
 
     const fetchRelatedListings = async () => {
-      try {
-        const response = await axios.get(`/api/listing/related?game=${(listingData as { game: string })?.game}`);
-        setRelatedListings(response.data);
-      } catch (error) {
-        console.error('Error fetching related listings:', error);
+      if (listingData) {
+        try {
+          const response = await axios.get(`/api/listing/related?game=${(listingData as { game: string })?.game}`);
+          setRelatedListings(response.data);
+        } catch (error) {
+          console.error('Error fetching related listings:', error);
+        }
       }
     };
 
