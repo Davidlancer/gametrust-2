@@ -6,7 +6,7 @@ import Button from '../UI/Button';
 import { featuredListings } from '../../data/mockData';
 
 interface FeaturedListingsProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, listingId?: string) => void;
 }
 
 const FeaturedListings: React.FC<FeaturedListingsProps> = ({ onNavigate }) => {
@@ -99,7 +99,7 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ onNavigate }) => {
                   </div>
                   <Button 
                     variant="outline"
-                    onClick={() => onNavigate(`listing/${listing.id}`)}
+                    onClick={() => onNavigate('listing-details', listing.id)}
                     className="mt-4"
                   >
                     View Details

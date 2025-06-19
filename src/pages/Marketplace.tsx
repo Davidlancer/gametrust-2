@@ -6,7 +6,11 @@ import Button from '../components/UI/Button';
 import { featuredListings, games } from '../data/mockData';
 import { FilterOptions } from '../types';
 
-const Marketplace: React.FC = () => {
+interface MarketplaceProps {
+  onNavigate: (page: string, listingId?: string) => void;
+}
+
+const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('newest');
@@ -195,7 +199,12 @@ const Marketplace: React.FC = () => {
                         <span className="text-xs text-gray-400">{listing.seller.rating}</span>
                       </div>
                     </div>
-                    <Button size="sm" variant="ghost" className="text-indigo-400 hover:text-indigo-300">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="text-indigo-400 hover:text-indigo-300"
+                      onClick={() => onNavigate('listing-details', listing.id)}
+                    >
                       View Details
                     </Button>
                   </div>

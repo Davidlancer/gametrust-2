@@ -6,13 +6,18 @@ import Marketplace from './pages/Marketplace';
 import Sell from './pages/Sell';
 import Auth from './pages/Auth';
 import Platforms from './pages/Platforms';
+import ListingDetails from './pages/ListingDetails';
 
-type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms';
+type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [selectedListingId, setSelectedListingId] = useState<string>('1');
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, listingId?: string) => {
+    if (page === 'listing-details' && listingId) {
+      setSelectedListingId(listingId);
+    }
     setCurrentPage(page as Page);
   };
 
@@ -21,13 +26,15 @@ function App() {
       case 'home':
         return <Home onNavigate={handleNavigate} />;
       case 'marketplace':
-        return <Marketplace />;
+        return <Marketplace onNavigate={handleNavigate} />;
       case 'sell':
         return <Sell />;
       case 'auth':
         return <Auth />;
       case 'platforms':
         return <Platforms onNavigate={handleNavigate} />;
+      case 'listing-details':
+        return <ListingDetails listingId={selectedListingId} onNavigate={handleNavigate} />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }
