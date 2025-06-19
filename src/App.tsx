@@ -7,16 +7,21 @@ import Sell from './pages/Sell';
 import Auth from './pages/Auth';
 import Platforms from './pages/Platforms';
 import ListingDetails from './pages/ListingDetails';
+import SellerProfile from './pages/SellerProfile';
 
-type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details';
+type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [selectedListingId, setSelectedListingId] = useState<string>('1');
+  const [selectedSellerId, setSelectedSellerId] = useState<string>('1');
 
-  const handleNavigate = (page: string, listingId?: string) => {
-    if (page === 'listing-details' && listingId) {
-      setSelectedListingId(listingId);
+  const handleNavigate = (page: string, id?: string) => {
+    if (page === 'listing-details' && id) {
+      setSelectedListingId(id);
+    }
+    if (page === 'seller-profile' && id) {
+      setSelectedSellerId(id);
     }
     setCurrentPage(page as Page);
   };
@@ -35,6 +40,8 @@ function App() {
         return <Platforms onNavigate={handleNavigate} />;
       case 'listing-details':
         return <ListingDetails listingId={selectedListingId} onNavigate={handleNavigate} />;
+      case 'seller-profile':
+        return <SellerProfile sellerId={selectedSellerId} onNavigate={handleNavigate} />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }

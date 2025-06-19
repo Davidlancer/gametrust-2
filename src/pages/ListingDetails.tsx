@@ -27,7 +27,7 @@ import { featuredListings } from '../data/mockData';
 
 interface ListingDetailsProps {
   listingId?: string;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, id?: string) => void;
 }
 
 const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavigate }) => {
@@ -344,7 +344,12 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                 </div>
 
                 <div className="flex space-x-3">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => onNavigate('seller-profile', listing.seller.id)}
+                  >
                     <User className="mr-2 h-4 w-4" />
                     View Profile
                   </Button>
