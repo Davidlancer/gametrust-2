@@ -1,7 +1,11 @@
 import React from 'react';
 import { Shield, Twitter, Github, Disc as Discord } from 'lucide-react';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+  onNavigate: (page: string) => void;
+}
+
+const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   return (
     <footer className="bg-gray-900 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -27,10 +31,10 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-white font-semibold mb-4">Platform</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Marketplace</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Start Selling</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">How It Works</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Verification</a></li>
+              <li><button onClick={() => onNavigate('marketplace')} className="text-gray-400 hover:text-white transition-colors">Marketplace</button></li>
+              <li><button onClick={() => onNavigate('sell')} className="text-gray-400 hover:text-white transition-colors">Start Selling</button></li>
+              <li><button onClick={() => onNavigate('platforms')} className="text-gray-400 hover:text-white transition-colors">Platforms</button></li>
+              <li><button onClick={() => onNavigate('help-center')} className="text-gray-400 hover:text-white transition-colors">How It Works</button></li>
             </ul>
           </div>
 
@@ -38,10 +42,10 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-white font-semibold mb-4">Support</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Help Center</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Safety Guidelines</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Contact Us</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+              <li><button onClick={() => onNavigate('help-center')} className="text-gray-400 hover:text-white transition-colors">Help Center</button></li>
+              <li><button onClick={() => onNavigate('contact')} className="text-gray-400 hover:text-white transition-colors">Contact Us</button></li>
+              <li><button onClick={() => onNavigate('help-center')} className="text-gray-400 hover:text-white transition-colors">Safety Guidelines</button></li>
+              <li><button onClick={() => onNavigate('terms')} className="text-gray-400 hover:text-white transition-colors">Terms of Service</button></li>
             </ul>
           </div>
         </div>

@@ -8,8 +8,11 @@ import Auth from './pages/Auth';
 import Platforms from './pages/Platforms';
 import ListingDetails from './pages/ListingDetails';
 import SellerProfile from './pages/SellerProfile';
+import HelpCenter from './pages/HelpCenter';
+import Contact from './pages/Contact';
+import Terms from './pages/Terms';
 
-type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile';
+type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'help-center' | 'contact' | 'terms';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -42,6 +45,12 @@ function App() {
         return <ListingDetails listingId={selectedListingId} onNavigate={handleNavigate} />;
       case 'seller-profile':
         return <SellerProfile sellerId={selectedSellerId} onNavigate={handleNavigate} />;
+      case 'help-center':
+        return <HelpCenter onNavigate={handleNavigate} />;
+      case 'contact':
+        return <Contact onNavigate={handleNavigate} />;
+      case 'terms':
+        return <Terms onNavigate={handleNavigate} />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }
@@ -53,7 +62,7 @@ function App() {
       <main>
         {renderPage()}
       </main>
-      <Footer />
+      <Footer onNavigate={handleNavigate} />
     </div>
   );
 }
