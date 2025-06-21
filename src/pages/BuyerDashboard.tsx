@@ -71,6 +71,37 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
     };
   }, [sidebarOpen, isDesktop]);
 
+  // Listen for navigation events from notifications
+  useEffect(() => {
+    const handleWalletNavigation = () => {
+      setCurrentPage('wallet');
+    };
+    
+    const handleReferralNavigation = () => {
+      setCurrentPage('referral');
+    };
+    
+    const handleOrdersNavigation = () => {
+      setCurrentPage('orders');
+    };
+    
+    const handleDisputesNavigation = () => {
+      setCurrentPage('disputes');
+    };
+
+    window.addEventListener('navigateToWallet', handleWalletNavigation);
+    window.addEventListener('navigateToReferral', handleReferralNavigation);
+    window.addEventListener('navigateToOrders', handleOrdersNavigation);
+    window.addEventListener('navigateToDisputes', handleDisputesNavigation);
+    
+    return () => {
+      window.removeEventListener('navigateToWallet', handleWalletNavigation);
+      window.removeEventListener('navigateToReferral', handleReferralNavigation);
+      window.removeEventListener('navigateToOrders', handleOrdersNavigation);
+      window.removeEventListener('navigateToDisputes', handleDisputesNavigation);
+    };
+  }, []);
+
   const handlePageChange = (page: BuyerDashboardPage | DashboardPage) => {
     // Check if the page is a valid BuyerDashboardPage
     const validBuyerPages: BuyerDashboardPage[] = ['overview', 'orders', 'wallet', 'referral', 'disputes', 'saved', 'settings'];
@@ -78,21 +109,18 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
       setCurrentPage(page as BuyerDashboardPage);
     }
     setSidebarOpen(false);
-    if (onNavigate) {
-      onNavigate(`/dashboard/buyer/${page === 'overview' ? '' : page}`);
-    }
   };
 
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'overview':
-        return <BuyerDashboardOverview handlePageChange={handlePageChange} />;
+        return <BuyerDashboardOverview handlePageChange={handlePageChange} onNavigate={onNavigate} />;
       case 'orders':
         return <BuyerOrders />;
       case 'wallet':
         return <BuyerWallet />;
       case 'referral':
-        return <BuyerReferral />;
+        return <BuyerReferral onNavigate={onNavigate} />;
       case 'disputes':
         return <BuyerDisputes />;
       case 'saved':
@@ -134,7 +162,7 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+              className="fixed top-12 bottom-0 left-64 right-0 bg-black/50 z-30 lg:hidden"
             />
           )}
         </AnimatePresence>

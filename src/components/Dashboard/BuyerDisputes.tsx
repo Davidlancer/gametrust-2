@@ -11,6 +11,7 @@ import {
   PaperClipIcon,
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
+import { useToast } from '../UI/ToastProvider';
 
 interface Dispute {
   id: string;
@@ -140,9 +141,11 @@ const getStatusText = (status: string) => {
 };
 
 const BuyerDisputes: React.FC = () => {
+  const { showSuccess, showError, showInfo } = useToast();
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [uploading, setUploading] = useState(false);
   
   const filteredDisputes = mockDisputes.filter(dispute => {
     if (filter === 'all') return true;
@@ -383,7 +386,11 @@ const BuyerDisputes: React.FC = () => {
                 {selectedDispute.supportThread && (
                   <Button
                     variant="outline"
-                    onClick={() => window.open(`/support/thread/${selectedDispute.supportThread}`, '_blank')}
+                    onClick={() => {
+                      showInfo('Opening support thread...');
+                      // Here you would typically navigate to the support thread
+                      console.log('Opening support thread:', selectedDispute.supportThread);
+                    }}
                     className="flex-1"
                   >
                     <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2" />
@@ -453,13 +460,30 @@ const BuyerDisputes: React.FC = () => {
                 </Button>
                 <Button
                   variant="primary"
-                  onClick={() => {
-                    // Handle file upload
-                    setShowUploadModal(false);
+                  onClick={async () => {
+                    setUploading(true);
+                    try {
+                      // Simulate file upload
+                      await new Promise(resolve => setTimeout(resolve, 2000));
+                      showSuccess('Evidence uploaded successfully! Our team will review it shortly.');
+                      setShowUploadModal(false);
+                    } catch (error) {
+                      showError('Failed to upload evidence. Please try again.');
+                    } finally {
+                      setUploading(false);
+                    }
                   }}
-                  className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                  disabled={uploading}
+                  className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50"
                 >
-                  Upload Evidence
+                  {uploading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Uploading...</span>
+                    </div>
+                  ) : (
+                    'Upload Evidence'
+                  )}
                 </Button>
               </div>
             </div>

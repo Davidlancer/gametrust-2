@@ -9,9 +9,17 @@ interface AuthProps {
 
 // DEVELOPMENT MODE - Mock Authentication
 const MOCK_CREDENTIALS = {
-  email: 'test@gametrust.gg',
-  password: 'password123'
+  buyer: {
+    email: 'buyer@gametrust.gg',
+    password: 'password123'
+  },
+  seller: {
+    email: 'test@gametrust.gg',
+    password: 'password123'
+  }
 };
+
+const DEV_MODE = true; // Toggle for testing mode
 
 const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -59,26 +67,40 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
       onNavigate('onboarding');
     } else {
       // Mock sign in - check test credentials
-      if (formData.email === MOCK_CREDENTIALS.email && formData.password === MOCK_CREDENTIALS.password) {
+      const isBuyer = formData.email === MOCK_CREDENTIALS.buyer.email && formData.password === MOCK_CREDENTIALS.buyer.password;
+      const isSeller = formData.email === MOCK_CREDENTIALS.seller.email && formData.password === MOCK_CREDENTIALS.seller.password;
+      
+      if (isBuyer || isSeller) {
+        const userType = isBuyer ? 'buyer' : 'seller';
+        
         // Store mock user data
         localStorage.setItem('mockUser', JSON.stringify({
           email: formData.email,
-          username: 'TestUser',
+          username: isBuyer ? 'BuyerUser' : 'TestUser',
+          userType,
           isAuthenticated: true,
           loginTime: new Date().toISOString()
         }));
         
+        // Store mock login flag
+        localStorage.setItem('mockLogin', 'true');
+        
         setIsLoading(false);
         
         // Check if user has completed onboarding
-        const onboarded = localStorage.getItem('userOnboarded');
+        const onboarded = localStorage.getItem('onboardingComplete');
         if (onboarded === 'true') {
-          onNavigate('seller-dashboard');
+          // Route based on user type
+          if (isBuyer) {
+            onNavigate('buyer-dashboard');
+          } else {
+            onNavigate('seller-dashboard');
+          }
         } else {
           onNavigate('onboarding');
         }
       } else {
-        setError('Invalid credentials. Use test@gametrust.gg / password123');
+        setError('Invalid credentials. Use buyer@gametrust.gg / password123 or test@gametrust.gg / password123');
         setIsLoading(false);
       }
     }
@@ -119,7 +141,8 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
                 <span>Testing Mode Active</span>
               </div>
               <p className="text-xs text-yellow-300 mt-1">
-                Use: test@gametrust.gg / password123
+                Buyer: buyer@gametrust.gg / password123<br/>
+                Seller: test@gametrust.gg / password123
               </p>
             </div>
           </div>

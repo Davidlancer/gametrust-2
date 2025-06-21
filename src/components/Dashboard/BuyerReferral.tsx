@@ -12,6 +12,7 @@ import {
   ArrowTopRightOnSquareIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
+import { useToast } from '../UI/ToastProvider';
 
 interface ReferralStats {
   totalReferrals: number;
@@ -30,10 +31,10 @@ interface Referral {
 }
 
 const mockStats: ReferralStats = {
-  totalReferrals: 8,
-  completedReferrals: 5,
-  totalEarnings: 3500,
-  pendingEarnings: 1500
+  totalReferrals: 12,
+  completedReferrals: 6,
+  totalEarnings: 3000,
+  pendingEarnings: 0
 };
 
 const mockReferrals: Referral[] = [
@@ -63,23 +64,80 @@ const mockReferrals: Referral[] = [
   },
   {
     id: 'REF-004',
+    username: '@firemaster',
+    joinDate: 'June 10, 2024',
+    status: 'completed',
+    earnings: 500,
+    firstPurchase: 'June 11, 2024'
+  },
+  {
+    id: 'REF-005',
+    username: '@elitegamer',
+    joinDate: 'June 8, 2024',
+    status: 'completed',
+    earnings: 500,
+    firstPurchase: 'June 9, 2024'
+  },
+  {
+    id: 'REF-006',
+    username: '@progamer99',
+    joinDate: 'June 6, 2024',
+    status: 'completed',
+    earnings: 500,
+    firstPurchase: 'June 7, 2024'
+  },
+  {
+    id: 'REF-007',
     username: '@newuser1',
     joinDate: 'June 20, 2024',
     status: 'pending',
     earnings: 0
   },
   {
-    id: 'REF-005',
+    id: 'REF-008',
     username: '@gamer456',
     joinDate: 'June 19, 2024',
+    status: 'pending',
+    earnings: 0
+  },
+  {
+    id: 'REF-009',
+    username: '@mobilegamer',
+    joinDate: 'June 17, 2024',
+    status: 'pending',
+    earnings: 0
+  },
+  {
+    id: 'REF-010',
+    username: '@casualplayer',
+    joinDate: 'June 16, 2024',
+    status: 'pending',
+    earnings: 0
+  },
+  {
+    id: 'REF-011',
+    username: '@gamingfan',
+    joinDate: 'June 14, 2024',
+    status: 'pending',
+    earnings: 0
+  },
+  {
+    id: 'REF-012',
+    username: '@playerone',
+    joinDate: 'June 13, 2024',
     status: 'pending',
     earnings: 0
   }
 ];
 
-const BuyerReferral: React.FC = () => {
+interface BuyerReferralProps {
+  onNavigate?: (page: string) => void;
+}
+
+const BuyerReferral: React.FC<BuyerReferralProps> = ({ onNavigate }) => {
   const [copied, setCopied] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const { showSuccess } = useToast();
   
   const referralLink = 'https://gametrust.ng/ref/blunt123';
   const referralCode = 'BLUNT123';
@@ -88,6 +146,12 @@ const BuyerReferral: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+    
+    if (text === referralLink) {
+      showSuccess('Link Copied!', 'Your referral link has been copied to clipboard. Share it with friends to earn ₦500 each!');
+    } else {
+      showSuccess('Code Copied!', 'Your referral code has been copied to clipboard.');
+    }
   };
   
   const shareOnWhatsApp = () => {
@@ -261,7 +325,7 @@ const BuyerReferral: React.FC = () => {
           <h2 className="text-xl font-semibold text-white">Referral History</h2>
           <Button
             variant="outline"
-            onClick={() => window.open('/referral-program', '_blank')}
+            onClick={() => onNavigate?.('referral-program')}
             className="flex items-center space-x-2"
           >
             <ArrowTopRightOnSquareIcon className="w-4 h-4" />

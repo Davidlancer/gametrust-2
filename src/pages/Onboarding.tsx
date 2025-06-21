@@ -120,9 +120,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
       if (selectedRoles.includes('seller') && !selectedRoles.includes('buyer')) {
         onNavigate('seller-dashboard');
       } else if (selectedRoles.includes('buyer') && !selectedRoles.includes('seller')) {
-        onNavigate('marketplace');
+        onNavigate('buyer-dashboard');
       } else {
-        onNavigate('home');
+        // Both roles - default to buyer dashboard
+        onNavigate('buyer-dashboard');
       }
     }, 2000);
   };
@@ -139,9 +140,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
     if (selectedRoles.includes('seller') && !selectedRoles.includes('buyer')) {
       return { text: 'Create Your First Listing', action: () => onNavigate('seller-dashboard') };
     } else if (selectedRoles.includes('buyer') && !selectedRoles.includes('seller')) {
-      return { text: 'Start Browsing Accounts', action: () => onNavigate('marketplace') };
+      return { text: 'Go to Buyer Dashboard', action: () => onNavigate('buyer-dashboard') };
     } else {
-      return { text: 'Go to Dashboard', action: () => onNavigate('home') };
+      return { text: 'Go to Buyer Dashboard', action: () => onNavigate('buyer-dashboard') };
     }
   };
 

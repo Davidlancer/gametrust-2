@@ -65,6 +65,16 @@ const SellerDashboard: React.FC<SellerDashboardProps> = () => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
+  // Listen for wallet navigation events
+  useEffect(() => {
+    const handleWalletNavigation = () => {
+      setCurrentPage('wallet');
+    };
+
+    window.addEventListener('navigateToWallet', handleWalletNavigation);
+    return () => window.removeEventListener('navigateToWallet', handleWalletNavigation);
+  }, []);
+
   const handlePageChange = (page: DashboardPage) => {
     if (page === 'orders') {
       setPendingOrdersModalOpen(true);

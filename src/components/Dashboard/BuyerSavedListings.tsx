@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   HeartIcon,
@@ -8,9 +8,11 @@ import {
   MagnifyingGlassIcon,
   StarIcon,
   ShieldCheckIcon,
+  FunnelIcon,
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import Button from '../UI/Button';
+import { useToast } from '../UI/ToastProvider';
 
 interface SavedListing {
   id: string;
@@ -150,6 +152,7 @@ const getStatusBadge = (status: string) => {
 };
 
 const BuyerSavedListings: React.FC = () => {
+  const { showSuccess, showError, showInfo } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [gameFilter, setGameFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -167,22 +170,34 @@ const BuyerSavedListings: React.FC = () => {
     return matchesSearch && matchesGame && matchesStatus;
   });
   
-  const handleRemoveFromSaved = (listingId: string) => {
+  const handleRemoveFromSaved = async (listingId: string) => {
     setRemovingId(listingId);
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Removed listing:', listingId);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      showSuccess('Listing removed from saved items');
+      setSelectedListing(null);
+    } catch (error) {
+      showError('Failed to remove listing. Please try again.');
+    } finally {
       setRemovingId(null);
-    }, 1000);
+    }
   };
   
   const handleBuyNow = (listing: SavedListing) => {
+    showInfo(`Redirecting to purchase ${listing.title}...`);
+    // Here you would typically navigate to the purchase page
     console.log('Buying listing:', listing.id);
     // Redirect to purchase flow
   };
   
   const handleViewDetails = (listing: SavedListing) => {
     setSelectedListing(listing);
+  };
+
+  const handleBrowseMarketplace = () => {
+    showInfo('Redirecting to marketplace...');
+    // Here you would typically navigate to the marketplace
   };
 
   return (
@@ -260,7 +275,7 @@ const BuyerSavedListings: React.FC = () => {
               <p className="text-gray-500">Start browsing and save your favorite gaming accounts</p>
               <Button
                 variant="primary"
-                onClick={() => window.open('/marketplace', '_blank')}
+                onClick={handleBrowseMarketplace}
                 className="mt-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
               >
                 Browse Marketplace

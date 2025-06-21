@@ -15,6 +15,7 @@ import {
   CogIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
+import { useToast } from "../UI/ToastProvider";
 
 interface UserProfile {
   firstName: string;
@@ -79,6 +80,7 @@ const mockNotifications: NotificationSettings = {
 };
 
 const BuyerSettings: React.FC = () => {
+  const { showSuccess, showError, showInfo } = useToast();
   const [activeTab, setActiveTab] = useState('profile');
   const [profile, setProfile] = useState(mockProfile);
   const [security, setSecurity] = useState(mockSecurity);
@@ -99,43 +101,76 @@ const BuyerSettings: React.FC = () => {
   
   const handleProfileSave = async () => {
     setSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('Profile saved:', profile);
-    setSaving(false);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      showSuccess('Profile updated successfully!');
+      console.log('Profile saved:', profile);
+    } catch (error) {
+      showError('Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
   
   const handlePasswordChange = async () => {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert('Passwords do not match');
+      showError('Passwords do not match');
+      return;
+    }
+    
+    if (passwordForm.newPassword.length < 8) {
+      showError('Password must be at least 8 characters long');
       return;
     }
     
     setSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('Password changed');
-    setShowPasswordModal(false);
-    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    setSaving(false);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      showSuccess('Password changed successfully!');
+      setShowPasswordModal(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setSecurity(prev => ({ ...prev, lastPasswordChange: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }));
+    } catch (error) {
+      showError('Failed to change password. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
   
   const handle2FAToggle = async () => {
     if (security.twoFactorEnabled) {
       // Disable 2FA
-      setSecurity(prev => ({ ...prev, twoFactorEnabled: false }));
+      try {
+        setSecurity(prev => ({ ...prev, twoFactorEnabled: false }));
+        showSuccess('Two-factor authentication disabled');
+      } catch (error) {
+        showError('Failed to disable 2FA. Please try again.');
+      }
     } else {
       // Show 2FA setup modal
-      setShow2FAModal(true);
+      showInfo('2FA setup feature coming soon!');
+      // setShow2FAModal(true);
     }
   };
   
   const handleNotificationSave = async () => {
     setSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('Notifications saved:', notifications);
-    setSaving(false);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      showSuccess('Notification preferences saved!');
+      console.log('Notifications saved:', notifications);
+    } catch (error) {
+      showError('Failed to save preferences. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleProfilePictureUpload = () => {
+    showInfo('Profile picture upload feature coming soon!');
   };
 
   const tabs = [
@@ -196,7 +231,11 @@ const BuyerSettings: React.FC = () => {
                 <div>
                   <p className="text-white font-medium mb-1">Update your profile picture</p>
                   <p className="text-sm text-gray-400 mb-3">JPG, PNG or GIF. Max size 2MB.</p>
-                  <Button variant="outline" className="text-sm">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleProfilePictureUpload}
+                    className="text-sm"
+                  >
                     Upload New Picture
                   </Button>
                 </div>

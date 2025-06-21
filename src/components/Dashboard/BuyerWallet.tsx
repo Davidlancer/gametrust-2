@@ -12,6 +12,8 @@ import {
   XCircleIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
+import { useToast } from '../UI/ToastProvider';
+import { notificationService } from '../../services/notificationService';
 
 interface Transaction {
   id: string;
@@ -28,7 +30,7 @@ const mockTransactions: Transaction[] = [
     id: 'TXN-001',
     type: 'escrow_payment',
     description: 'CODM Legendary Account Purchase',
-    amount: -75000,
+    amount: -70000,
     status: 'pending',
     date: 'June 18, 2024',
     orderId: 'ORD-001'
@@ -37,40 +39,40 @@ const mockTransactions: Transaction[] = [
     id: 'TXN-002',
     type: 'deposit',
     description: 'Wallet Funding via Bank Transfer',
-    amount: 100000,
+    amount: 150000,
     status: 'completed',
     date: 'June 17, 2024'
   },
   {
     id: 'TXN-003',
-    type: 'refund',
-    description: 'PUBG Account Refund',
-    amount: 70000,
+    type: 'escrow_payment',
+    description: 'PUBG Elite Account Purchase',
+    amount: -50000,
     status: 'completed',
     date: 'June 15, 2024',
-    orderId: 'ORD-005'
+    orderId: 'ORD-002'
   },
   {
     id: 'TXN-004',
     type: 'referral_bonus',
     description: 'Referral bonus from @newuser',
-    amount: 500,
+    amount: 3000,
     status: 'completed',
     date: 'June 14, 2024'
   },
   {
     id: 'TXN-005',
     type: 'escrow_payment',
-    description: 'Free Fire Account Purchase',
-    amount: -45000,
-    status: 'completed',
+    description: 'Free Fire God Mode Account Purchase',
+    amount: -30000,
+    status: 'disputed',
     date: 'June 12, 2024',
     orderId: 'ORD-003'
   },
   {
     id: 'TXN-006',
     type: 'deposit',
-    description: 'Wallet Funding via Card',
+    description: 'Initial Wallet Setup',
     amount: 50000,
     status: 'completed',
     date: 'June 10, 2024'
@@ -123,9 +125,10 @@ const BuyerWallet: React.FC = () => {
   const [fundAmount, setFundAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [filter, setFilter] = useState('all');
+  const { showSuccess, showError } = useToast();
   
-  const currentBalance = 12000;
-  const pendingBalance = 75000; // Amount in escrow
+  const currentBalance = 100000;
+  const pendingBalance = 70000; // Amount in escrow
   
   const filteredTransactions = mockTransactions.filter(transaction => {
     if (filter === 'all') return true;
@@ -133,8 +136,24 @@ const BuyerWallet: React.FC = () => {
   });
 
   const handleFundWallet = () => {
-    // Handle wallet funding logic
-    console.log('Funding wallet with:', fundAmount, 'via', paymentMethod);
+    if (!fundAmount || parseFloat(fundAmount) <= 0) {
+      showError('Invalid Amount', 'Please enter a valid amount to fund your wallet.');
+      return;
+    }
+    
+    const amount = parseFloat(fundAmount);
+    const methodName = paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 
+                      paymentMethod === 'card' ? 'Debit/Credit Card' : 'USSD';
+    
+    // Use notification service for both notification and toast
+    notificationService.walletFunded(
+      `₦${amount.toLocaleString()}`,
+      {
+        toastTitle: '💸 Wallet Funded',
+        toastMessage: `You just added ₦${amount.toLocaleString()} to your balance.`
+      }
+    );
+    
     setShowFundModal(false);
     setFundAmount('');
   };

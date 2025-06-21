@@ -9,6 +9,8 @@ import {
   ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
+import { useToast } from '../UI/ToastProvider';
+import DisputeModal from '../UI/DisputeModal';
 
 interface Order {
   id: string;
@@ -33,53 +35,47 @@ const mockOrders: Order[] = [
   {
     id: 'ORD-001',
     game: 'CODM',
-    accountTitle: 'Lvl 72 Legendary',
+    accountTitle: 'Legendary',
     seller: '@GamerPlug',
     sellerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=64&h=64&fit=crop&crop=face',
-    price: 75000,
+    price: 70000,
     status: 'in_escrow',
     escrowStatus: 'delivered',
     date: 'June 18, 2024',
     timeLeft: '2 days left to confirm',
     credentials: {
-      email: 'account@email.com',
-      password: '••••••••',
-      additionalInfo: 'Facebook linked, all skins included'
+      email: 'codm.legend@email.com',
+      password: 'SecurePass123',
+      additionalInfo: 'Facebook linked, all legendary skins included'
     },
     proofImages: ['proof1.jpg', 'proof2.jpg']
   },
   {
     id: 'ORD-002',
-    game: 'PUBG Mobile',
-    accountTitle: 'Conqueror Tier',
+    game: 'PUBG',
+    accountTitle: 'Elite',
     seller: '@ProGamer',
     sellerAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face',
-    price: 120000,
+    price: 50000,
     status: 'completed',
     escrowStatus: 'confirmed',
-    date: 'June 15, 2024'
+    date: 'June 15, 2024',
+    credentials: {
+      email: 'pubg.elite@email.com',
+      password: 'ElitePass456',
+      additionalInfo: 'All season passes completed'
+    }
   },
   {
     id: 'ORD-003',
     game: 'Free Fire',
-    accountTitle: 'Heroic Rank',
+    accountTitle: 'God Mode',
     seller: '@FireMaster',
     sellerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face',
-    price: 45000,
+    price: 30000,
     status: 'disputed',
     escrowStatus: 'disputed',
     date: 'June 12, 2024'
-  },
-  {
-    id: 'ORD-004',
-    game: 'CODM',
-    accountTitle: 'Master Rank',
-    seller: '@EliteGamer',
-    sellerAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=64&h=64&fit=crop&crop=face',
-    price: 60000,
-    status: 'completed',
-    escrowStatus: 'confirmed',
-    date: 'June 10, 2024'
   }
 ];
 
@@ -130,6 +126,10 @@ const BuyerOrders: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeOrder, setDisputeOrder] = useState<Order | null>(null);
+  const [disputedOrders, setDisputedOrders] = useState<Set<string>>(new Set());
+  const { showSuccess, showError, showWarning } = useToast();
 
   const filteredOrders = mockOrders.filter(order => {
     const matchesSearch = order.game.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -142,13 +142,26 @@ const BuyerOrders: React.FC = () => {
   });
 
   const handleConfirmAccess = (orderId: string) => {
-    // Handle confirm access logic
-    console.log('Confirming access for order:', orderId);
+    const order = mockOrders.find(o => o.id === orderId);
+    showSuccess(
+      'Access Confirmed!',
+      `Successfully confirmed access for ${order?.accountTitle} account. Escrow funds have been released to the seller.`
+    );
+    setSelectedOrder(null);
   };
 
   const handleOpenDispute = (orderId: string) => {
-    // Handle open dispute logic
-    console.log('Opening dispute for order:', orderId);
+    const order = mockOrders.find(o => o.id === orderId);
+    if (order) {
+      setDisputeOrder(order);
+      setShowDisputeModal(true);
+    }
+  };
+
+  const handleDisputeSubmitted = (orderId: string) => {
+    setDisputedOrders(prev => new Set([...prev, orderId]));
+    setShowDisputeModal(false);
+    setDisputeOrder(null);
   };
 
   return (
@@ -260,14 +273,25 @@ const BuyerOrders: React.FC = () => {
                                 >
                                   Confirm
                                 </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenDispute(order.id)}
-                                  className="border-red-500 text-red-400 hover:bg-red-500/10"
-                                >
-                                  Dispute
-                                </Button>
+                                {disputedOrders.has(order.id) ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled
+                                    className="border-orange-500 text-orange-400 cursor-not-allowed"
+                                  >
+                                    In Dispute
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenDispute(order.id)}
+                                    className="border-red-500 text-red-400 hover:bg-red-500/10"
+                                  >
+                                    Open Dispute
+                                  </Button>
+                                )}
                               </>
                             )}
                           </div>
@@ -335,14 +359,25 @@ const BuyerOrders: React.FC = () => {
                         >
                           Confirm
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenDispute(order.id)}
-                          className="border-red-500 text-red-400 hover:bg-red-500/10"
-                        >
-                          Dispute
-                        </Button>
+                        {disputedOrders.has(order.id) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="border-orange-500 text-orange-400 cursor-not-allowed"
+                          >
+                            In Dispute
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDispute(order.id)}
+                            className="border-red-500 text-red-400 hover:bg-red-500/10"
+                          >
+                            Open Dispute
+                          </Button>
+                        )}
                       </>
                     )}
                   </div>
@@ -435,19 +470,37 @@ const BuyerOrders: React.FC = () => {
                   >
                     Confirm Access
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleOpenDispute(selectedOrder.id)}
-                    className="flex-1 border-red-500 text-red-400 hover:bg-red-500/10"
-                  >
-                    Open Dispute
-                  </Button>
+                  {disputedOrders.has(selectedOrder.id) ? (
+                    <Button
+                      variant="outline"
+                      disabled
+                      className="flex-1 border-orange-500 text-orange-400 cursor-not-allowed"
+                    >
+                      In Dispute
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleOpenDispute(selectedOrder.id)}
+                      className="flex-1 border-red-500 text-red-400 hover:bg-red-500/10"
+                    >
+                      Open Dispute
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
           </motion.div>
         </div>
       )}
+
+      {/* Dispute Modal */}
+      <DisputeModal
+        isOpen={showDisputeModal}
+        onClose={() => setShowDisputeModal(false)}
+        order={disputeOrder}
+        onDisputeSubmitted={handleDisputeSubmitted}
+      />
     </div>
   );
 };

@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
 import { BuyerDashboardPage } from '../../types/dashboard';
+import { useToast } from '../UI/ToastProvider';
 
 interface StatCardProps {
   title: string;
@@ -23,19 +24,54 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, trend }) => (
   <motion.div
-    whileHover={{ scale: 1.02 }}
-    className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 lg:p-6 hover:border-indigo-500/30 transition-all duration-300"
+    whileHover={{ 
+      scale: 1.02,
+      y: -2,
+      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1)"
+    }}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, ease: "easeOut" }}
+    className="relative bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl p-5 lg:p-7 hover:border-indigo-400/40 transition-all duration-500 group overflow-hidden"
   >
-    <div className="flex items-center justify-between mb-3">
-      <div className={`w-10 h-10 lg:w-12 lg:h-12 ${color} rounded-lg flex items-center justify-center`}>
-        <Icon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
+    {/* Background glow effect */}
+    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    
+    {/* Animated border gradient */}
+    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm" />
+    
+    <div className="relative z-10">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`relative w-12 h-12 lg:w-14 lg:h-14 ${color} rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+          <Icon className="w-6 h-6 lg:w-7 lg:h-7 text-white drop-shadow-sm" />
+          {/* Icon glow effect */}
+          <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        </div>
+        {trend && (
+          <motion.span 
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-xs lg:text-sm bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent font-semibold px-2 py-1 bg-green-400/10 rounded-lg border border-green-400/20 ml-3"
+          >
+            {trend}
+          </motion.span>
+        )}
       </div>
-      {trend && (
-        <span className="text-xs lg:text-sm text-green-400 font-medium">{trend}</span>
-      )}
+      
+      <div className="space-y-2">
+        <motion.h3 
+          className="text-xl lg:text-3xl font-bold bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent leading-tight"
+          whileHover={{ scale: 1.05 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          {value}
+        </motion.h3>
+        <p className="text-sm lg:text-base text-gray-300 font-medium tracking-wide">{title}</p>
+      </div>
+      
+      {/* Subtle bottom accent line */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500/50 via-purple-500/50 to-pink-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-b-2xl" />
     </div>
-    <h3 className="text-lg lg:text-2xl font-bold text-white mb-1">{value}</h3>
-    <p className="text-xs lg:text-sm text-gray-400">{title}</p>
   </motion.div>
 );
 
@@ -53,31 +89,31 @@ const recentActivity: RecentActivityItem[] = [
     id: '1',
     type: 'order',
     title: 'CODM Legendary Account',
-    description: 'Order delivered - Confirm access',
+    description: 'Order delivered - Confirm access (₦70,000)',
     time: '2 hours ago',
     status: 'pending'
   },
   {
     id: '2',
-    type: 'payment',
-    title: 'Wallet Funded',
-    description: '₦50,000 added to wallet',
+    type: 'order',
+    title: 'PUBG Elite Account',
+    description: 'Order completed successfully (₦50,000)',
     time: '1 day ago',
     status: 'success'
   },
   {
     id: '3',
-    type: 'referral',
-    title: 'Referral Bonus',
-    description: '₦500 earned from @newuser',
+    type: 'dispute',
+    title: 'Free Fire God Mode',
+    description: 'Dispute opened - Under review (₦30,000)',
     time: '2 days ago',
-    status: 'success'
+    status: 'warning'
   },
   {
     id: '4',
-    type: 'order',
-    title: 'PUBG Mobile Account',
-    description: 'Order completed successfully',
+    type: 'referral',
+    title: 'Referral Bonus',
+    description: '₦500 earned from new user',
     time: '3 days ago',
     status: 'success'
   }
@@ -100,16 +136,32 @@ const getActivityIcon = (type: string) => {
 
 interface BuyerDashboardOverviewProps {
   handlePageChange: (page: BuyerDashboardPage) => void;
+  onNavigate?: (page: string) => void;
 }
 
-const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handlePageChange }) => {
+const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handlePageChange, onNavigate }) => {
+  const { showSuccess, showInfo } = useToast();
+
+  const handleMarketplaceClick = () => {
+    showInfo('Marketplace', 'This would redirect to marketplace in a real app');
+  };
+
+  const handleFundWallet = () => {
+    showSuccess('Wallet Funding', 'Mock funding modal would open here');
+    handlePageChange('wallet');
+  };
+
+  const handleReferralClick = () => {
+    showInfo('Referral Program', 'Opening referral dashboard...');
+    handlePageChange('referral');
+  };
   return (
     <div className="h-full flex flex-col space-y-4 lg:space-y-6 overflow-y-auto">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl p-4 lg:p-6 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-white mb-2">Welcome back, Blunt 👋</h1>
+            <h1 className="text-xl lg:text-2xl font-bold text-white mb-2">Welcome back, BuyerUser 👋</h1>
             <p className="text-sm lg:text-base text-gray-300">Ready to find your next gaming account?</p>
           </div>
           <div className="hidden lg:block">
@@ -117,7 +169,7 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
               variant="primary"
               size="sm"
               className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
-              onClick={() => window.location.href = '/marketplace'}
+              onClick={handleMarketplaceClick}
             >
               <EyeIcon className="w-4 h-4 mr-2" />
               Browse Marketplace
@@ -127,35 +179,67 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 flex-shrink-0">
-        <StatCard
-          title="Active Escrows"
-          value={3}
-          icon={ShoppingBagIcon}
-          color="bg-gradient-to-br from-blue-500 to-blue-600"
-          trend="+1 this week"
-        />
-        <StatCard
-          title="Completed Orders"
-          value={12}
-          icon={CheckCircleIcon}
-          color="bg-gradient-to-br from-green-500 to-green-600"
-          trend="+2 this month"
-        />
-        <StatCard
-          title="Wallet Balance"
-          value="₦12,000"
-          icon={WalletIcon}
-          color="bg-gradient-to-br from-indigo-500 to-purple-500"
-        />
-        <StatCard
-          title="Referral Earnings"
-          value="₦3,500"
-          icon={UserGroupIcon}
-          color="bg-gradient-to-br from-orange-500 to-red-500"
-          trend="+₦500 this week"
-        />
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8 flex-shrink-0"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <StatCard
+            title="Active Escrows"
+            value={1}
+            icon={ShoppingBagIcon}
+            color="bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500"
+            trend="Pending Confirmation"
+          />
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <StatCard
+            title="Completed Orders"
+            value={1}
+            icon={CheckCircleIcon}
+            color="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500"
+            trend="PUBG Elite"
+          />
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <StatCard
+            title="Wallet Balance"
+            value="₦100,000"
+            icon={WalletIcon}
+            color="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500"
+          />
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <StatCard
+            title="Referral Earnings"
+            value="₦3,000"
+            icon={UserGroupIcon}
+            color="bg-gradient-to-br from-orange-500 via-red-500 to-pink-500"
+            trend="6 Converted"
+          />
+        </motion.div>
+      </motion.div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 min-h-0">
         {/* Recent Activity */}
@@ -211,7 +295,7 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
             <Button
               variant="outline"
               className="w-full justify-start border-gray-700 hover:border-purple-400 hover:bg-purple-500/10 text-sm lg:text-base py-2 lg:py-3"
-              onClick={() => handlePageChange('wallet')}
+              onClick={handleFundWallet}
             >
               <PlusIcon className="w-4 h-4 lg:w-5 lg:h-5 mr-2 lg:mr-3" />
               Fund Wallet
@@ -220,7 +304,7 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
             <Button
               variant="outline"
               className="w-full justify-start border-gray-700 hover:border-orange-400 hover:bg-orange-500/10 text-sm lg:text-base py-2 lg:py-3"
-              onClick={() => handlePageChange('referral')}
+              onClick={handleReferralClick}
             >
               <GiftIcon className="w-4 h-4 lg:w-5 lg:h-5 mr-2 lg:mr-3" />
               Refer & Earn ₦500
@@ -230,7 +314,7 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
               <Button
                 variant="primary"
                 className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-sm lg:text-base py-2 lg:py-3"
-                onClick={() => window.location.href = '/marketplace'}
+                onClick={handleMarketplaceClick}
               >
                 <EyeIcon className="w-4 h-4 lg:w-5 lg:h-5 mr-2 lg:mr-3" />
                 Browse Marketplace

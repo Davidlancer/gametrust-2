@@ -1,20 +1,29 @@
 import React, { useState } from 'react';
-import { Menu, X, Shield, User, Search } from 'lucide-react';
+import { Menu, X, Shield, Search } from 'lucide-react';
+import RoleSwitcher from '../UI/RoleSwitcher';
+import NotificationBell from '../UI/NotificationBell';
 
 interface NavbarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
-  isAuthenticated?: boolean;
+  isAuthenticated: boolean;
+  onLogout: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticated = false }) => {
+const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticated, onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const getUserDashboard = () => {
+    const userType = localStorage.getItem('userType') || 'buyer';
+    return userType === 'seller' ? 'seller-dashboard' : 'buyer-dashboard';
+  };
 
   const navigation = [
     { name: 'Home', key: 'home' },
     { name: 'Marketplace', key: 'marketplace' },
     // { name: 'Sell', key: 'sell' },
-    { name: 'Platforms', key: 'platforms' }
+    { name: 'Platforms', key: 'platforms' },
+    { name: 'Referrals', key: 'referral-program' }
   ];
 
   return (
@@ -54,33 +63,23 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
               <Search className="h-5 w-5" />
             </button>
             
+            {isAuthenticated && (
+              <NotificationBell onNavigate={onNavigate} />
+            )}
+            
             {isAuthenticated ? (
-              <>
-                <button 
-                  onClick={() => onNavigate('seller-dashboard')}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                  Dashboard
-                </button>
-                <button 
-                  onClick={() => {
-                    localStorage.removeItem('mockUser');
-                    localStorage.removeItem('userOnboarded');
-                    localStorage.removeItem('onboardingData');
-                    window.location.reload();
-                  }}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                >
-                  Logout
-                </button>
-              </>
+              <RoleSwitcher 
+                onNavigate={onNavigate}
+                onLogout={onLogout}
+                currentPage={currentPage}
+              />
             ) : (
               <>
                 <button 
                   onClick={() => onNavigate('auth')}
-                  className="p-2 text-gray-400 hover:text-white transition-colors"
+                  className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 hover:border-gray-500 rounded-lg transition-colors"
                 >
-                  <User className="h-5 w-5" />
+                  Sign In
                 </button>
                 <button 
                   onClick={() => onNavigate('auth')}
@@ -128,7 +127,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                   <>
                     <button 
                       onClick={() => {
-                        onNavigate('seller-dashboard');
+                        const currentRole = localStorage.getItem('userRole') || 'buyer';
+                        onNavigate(currentRole === 'buyer' ? 'buyer-dashboard' : 'seller-dashboard');
                         setIsMenuOpen(false);
                       }}
                       className="block w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium transition-colors"
@@ -137,10 +137,17 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                     </button>
                     <button 
                       onClick={() => {
-                        localStorage.removeItem('mockUser');
-                        localStorage.removeItem('userOnboarded');
-                        localStorage.removeItem('onboardingData');
-                        window.location.reload();
+                        onNavigate('wallet');
+                        setIsMenuOpen(false);
+                      }}
+                      className="block w-full mt-2 bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-md font-medium transition-colors"
+                    >
+                      Wallet
+                    </button>
+                    <button 
+                      onClick={() => {
+                        onLogout();
+                        setIsMenuOpen(false);
                       }}
                       className="block w-full mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md font-medium transition-colors"
                     >
