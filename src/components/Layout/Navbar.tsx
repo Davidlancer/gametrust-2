@@ -4,9 +4,10 @@ import { Menu, X, Shield, User, Search } from 'lucide-react';
 interface NavbarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
+  isAuthenticated?: boolean;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
+const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticated = false }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigation = [
@@ -52,18 +53,43 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
             <button className="p-2 text-gray-400 hover:text-white transition-colors">
               <Search className="h-5 w-5" />
             </button>
-            <button 
-              onClick={() => onNavigate('auth')}
-              className="p-2 text-gray-400 hover:text-white transition-colors"
-            >
-              <User className="h-5 w-5" />
-            </button>
-            <button 
-              onClick={() => onNavigate('auth')}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              Start Selling
-            </button>
+            
+            {isAuthenticated ? (
+              <>
+                <button 
+                  onClick={() => onNavigate('seller-dashboard')}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Dashboard
+                </button>
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem('mockUser');
+                    localStorage.removeItem('userOnboarded');
+                    localStorage.removeItem('onboardingData');
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={() => onNavigate('auth')}
+                  className="p-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  <User className="h-5 w-5" />
+                </button>
+                <button 
+                  onClick={() => onNavigate('auth')}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Sign In
+                </button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -98,24 +124,51 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate }) => {
                 </button>
               ))}
               <div className="border-t border-gray-700 pt-3 mt-3">
-                <button 
-                  onClick={() => {
-                    onNavigate('auth');
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-left px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
-                >
-                  Sign In
-                </button>
-                <button 
-                  onClick={() => {
-                    onNavigate('sell');
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md font-medium transition-colors"
-                >
-                  Start Selling
-                </button>
+                {isAuthenticated ? (
+                  <>
+                    <button 
+                      onClick={() => {
+                        onNavigate('seller-dashboard');
+                        setIsMenuOpen(false);
+                      }}
+                      className="block w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium transition-colors"
+                    >
+                      Dashboard
+                    </button>
+                    <button 
+                      onClick={() => {
+                        localStorage.removeItem('mockUser');
+                        localStorage.removeItem('userOnboarded');
+                        localStorage.removeItem('onboardingData');
+                        window.location.reload();
+                      }}
+                      className="block w-full mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md font-medium transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => {
+                        onNavigate('auth');
+                        setIsMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
+                    >
+                      Sign In
+                    </button>
+                    <button 
+                      onClick={() => {
+                        onNavigate('auth');
+                        setIsMenuOpen(false);
+                      }}
+                      className="block w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium transition-colors"
+                    >
+                      Get Started
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

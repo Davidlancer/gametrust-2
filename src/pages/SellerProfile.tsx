@@ -26,6 +26,7 @@ import {
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Badge from '../components/UI/Badge';
+import ChatPopup from '../components/UI/ChatPopup';
 import { featuredListings, mockSeller } from '../data/mockData';
 
 interface SellerProfileProps {
@@ -39,6 +40,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
   const [isFollowing, setIsFollowing] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Mock data - in real app, fetch from API
   const seller = mockSeller;
@@ -198,7 +200,11 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
                         </>
                       )}
                     </Button>
-                    <Button variant="outline" size="md">
+                    <Button 
+                      variant="outline" 
+                      size="md"
+                      onClick={() => setIsChatOpen(true)}
+                    >
                       <MessageCircle className="mr-2 h-4 w-4" />
                       Message
                     </Button>
@@ -477,11 +483,37 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
             <p className="text-white font-semibold">{sellerStats.activeListings} Active Listings</p>
             <p className="text-sm text-gray-400">⭐ {sellerStats.averageRating} Rating</p>
           </div>
-          <Button className="bg-indigo-600 hover:bg-indigo-700 px-8">
-            View Listings
-          </Button>
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline"
+              onClick={() => setIsChatOpen(true)}
+              className="px-4"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700 px-6">
+              View Listings
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Chat Popup */}
+      <ChatPopup
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        seller={{
+          id: seller.id,
+          username: seller.username,
+          avatar: seller.avatar,
+          isOnline: true,
+          lastSeen: sellerStats.lastSeen
+        }}
+        onSendMessage={(message) => {
+          console.log('Message sent:', message);
+          // Here you would typically send the message to your backend
+        }}
+      />
     </div>
   );
 };

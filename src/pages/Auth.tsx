@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 
-const Auth: React.FC = () => {
+interface AuthProps {
+  onNavigate: (page: string) => void;
+}
+
+// DEVELOPMENT MODE - Mock Authentication
+const MOCK_CREDENTIALS = {
+  email: 'test@gametrust.gg',
+  password: 'password123'
+};
+
+const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -12,11 +22,66 @@ const Auth: React.FC = () => {
     username: '',
     confirmPassword: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle authentication logic here
-    console.log('Auth form submitted:', formData);
+    setIsLoading(true);
+    setError('');
+
+    // Simulate loading delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (isSignUp) {
+      // Mock sign up - always successful
+
+
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Store mock user data
+      localStorage.setItem('mockUser', JSON.stringify({
+        email: formData.email,
+        username: formData.username,
+        isAuthenticated: true,
+        loginTime: new Date().toISOString()
+      }));
+      
+      // Clear onboarding for new user
+      localStorage.removeItem('userOnboarded');
+      localStorage.removeItem('onboardingData');
+      
+      setIsLoading(false);
+      onNavigate('onboarding');
+    } else {
+      // Mock sign in - check test credentials
+      if (formData.email === MOCK_CREDENTIALS.email && formData.password === MOCK_CREDENTIALS.password) {
+        // Store mock user data
+        localStorage.setItem('mockUser', JSON.stringify({
+          email: formData.email,
+          username: 'TestUser',
+          isAuthenticated: true,
+          loginTime: new Date().toISOString()
+        }));
+        
+        setIsLoading(false);
+        
+        // Check if user has completed onboarding
+        const onboarded = localStorage.getItem('userOnboarded');
+        if (onboarded === 'true') {
+          onNavigate('seller-dashboard');
+        } else {
+          onNavigate('onboarding');
+        }
+      } else {
+        setError('Invalid credentials. Use test@gametrust.gg / password123');
+        setIsLoading(false);
+      }
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +111,17 @@ const Auth: React.FC = () => {
                 : 'Sign in to your GameTrust account'
               }
             </p>
+            
+            {/* Development Mode Banner */}
+            <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+              <div className="flex items-center justify-center space-x-2 text-yellow-400 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>Testing Mode Active</span>
+              </div>
+              <p className="text-xs text-yellow-300 mt-1">
+                Use: test@gametrust.gg / password123
+              </p>
+            </div>
           </div>
 
           {/* Toggle Tabs */}
@@ -71,6 +147,15 @@ const Auth: React.FC = () => {
               Sign Up
             </button>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/20 border border-red-600/30 rounded-lg">
+              <div className="flex items-center space-x-2 text-red-400 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
@@ -156,8 +241,15 @@ const Auth: React.FC = () => {
               </div>
             )}
 
-            <Button type="submit" size="lg" className="w-full">
-              {isSignUp ? 'Create Account' : 'Sign In'}
+            <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>{isSignUp ? 'Creating Account...' : 'Signing In...'}</span>
+                </div>
+              ) : (
+                isSignUp ? 'Create Account' : 'Sign In'
+              )}
             </Button>
           </form>
 
