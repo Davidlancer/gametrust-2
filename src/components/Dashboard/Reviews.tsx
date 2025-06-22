@@ -209,65 +209,62 @@ const Reviews: React.FC = () => {
         <p className="text-gray-400">Manage customer feedback and build your reputation</p>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-r from-[#00FFB2]/10 to-[#00A8E8]/10 border-[#00FFB2]/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-300">Average Rating</p>
-              <div className="flex items-center space-x-2 mt-1">
-                <p className="text-3xl font-bold text-[#00FFB2]">{averageRating.toFixed(1)}</p>
-                <StarRating rating={Math.round(averageRating)} size="sm" />
-              </div>
+      {/* Section 1: Ratings Overview - 4-Column Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Average Rating */}
+        <Card className="bg-[#1f2937] p-4 rounded-lg border border-gray-700">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <StarIcon className="w-8 h-8 text-[#00FFB2] mr-2" />
             </div>
-            <div className="p-3 rounded-lg bg-[#00FFB2]/20">
-              <StarIcon className="w-8 h-8 text-[#00FFB2]" />
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-400">Total Reviews</p>
-              <p className="text-3xl font-bold text-white">{totalReviews}</p>
-            </div>
-            <div className="p-3 rounded-lg bg-blue-500/20">
-              <ChatBubbleLeftRightIcon className="w-6 h-6 text-blue-400" />
+            <p className="text-sm text-gray-400 mb-1">Average Rating</p>
+            <p className="text-4xl font-bold text-white mb-2">{averageRating.toFixed(1)}</p>
+            <div className="flex justify-center">
+              <StarRating rating={Math.round(averageRating)} size="sm" />
             </div>
           </div>
         </Card>
 
-        <Card>
+        {/* Total Reviews */}
+        <Card className="bg-[#1f2937] p-4 rounded-lg border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Pending Replies</p>
-              <p className="text-3xl font-bold text-yellow-400">{unrepliedCount}</p>
+              <p className="text-sm text-gray-400">Total Reviews</p>
+              <p className="text-lg font-bold text-white">{totalReviews}</p>
             </div>
-            <div className="p-3 rounded-lg bg-yellow-500/20">
-              <ExclamationTriangleIcon className="w-6 h-6 text-yellow-400" />
-            </div>
+            <ChatBubbleLeftRightIcon className="w-6 h-6 text-blue-400" />
           </div>
         </Card>
 
-        <Card>
+        {/* Pending Replies */}
+        <Card className="bg-[#facc15]/10 p-4 rounded-lg border border-yellow-500/30">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">5-Star Rate</p>
-              <p className="text-3xl font-bold text-green-400">
+              <p className="text-sm text-gray-400">Pending Replies</p>
+              <p className="text-lg font-bold text-yellow-400">{unrepliedCount}</p>
+            </div>
+            <ExclamationTriangleIcon className="w-6 h-6 text-yellow-400" />
+          </div>
+        </Card>
+
+        {/* 5-Star Rate */}
+        <Card className="bg-green-500/10 p-4 rounded-lg border border-green-500/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">5-Star Rate</p>
+              <p className="text-lg font-bold text-green-400">
                 {totalReviews > 0 ? ((reviews.filter(r => r.rating === 5).length / totalReviews) * 100).toFixed(1) : 0}%
               </p>
             </div>
-            <div className="p-3 rounded-lg bg-green-500/20">
-              <TrophyIcon className="w-6 h-6 text-green-400" />
-            </div>
+            <TrophyIcon className="w-6 h-6 text-green-400" />
           </div>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Section 2: Rating Breakdown + Keywords - Side by Side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Rating Breakdown */}
-        <Card>
+        <Card className="bg-[#1f2937] p-4 rounded-lg border border-gray-700">
           <h3 className="text-lg font-semibold text-white mb-4">Rating Breakdown</h3>
           <div className="space-y-3">
             {ratingDistribution.map(({ rating, count, percentage }) => (
@@ -278,8 +275,8 @@ const Reviews: React.FC = () => {
                 </div>
                 <div className="flex-1 bg-gray-800 rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-[#00FFB2] to-[#00A8E8] h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${percentage}%` }}
+                    className="bg-green-400 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.max(percentage, 2)}%` }}
                   />
                 </div>
                 <span className="text-sm text-gray-400 w-12 text-right">{count}</span>
@@ -288,29 +285,21 @@ const Reviews: React.FC = () => {
           </div>
         </Card>
 
-        {/* Top Keywords */}
-        <Card>
+        {/* Common Keywords */}
+        <Card className="bg-[#1f2937] p-4 rounded-lg border border-gray-700">
           <h3 className="text-lg font-semibold text-white mb-4">Common Keywords</h3>
-          <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
             {topTags.map(({ tag, count }, index) => (
-              <motion.div
+              <motion.span
                 key={tag}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+                className="bg-gray-700 text-sm text-white px-3 py-1 rounded-md inline-flex items-center space-x-2"
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    index === 0 ? 'bg-[#00FFB2]' :
-                    index === 1 ? 'bg-[#00A8E8]' :
-                    index === 2 ? 'bg-yellow-400' :
-                    'bg-gray-400'
-                  }`} />
-                  <span className="text-white capitalize">{tag}</span>
-                </div>
-                <Badge className="bg-gray-700 text-gray-300">{count}</Badge>
-              </motion.div>
+                <span className="capitalize">{tag}</span>
+                <span className="bg-gray-600 text-xs px-1.5 py-0.5 rounded">{count}</span>
+              </motion.span>
             ))}
           </div>
           
@@ -323,36 +312,36 @@ const Reviews: React.FC = () => {
             </div>
           )}
         </Card>
-
-        {/* Quick Stats */}
-        <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Quick Stats</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Response Rate</span>
-              <span className="text-white font-medium">
-                {totalReviews > 0 ? ((reviews.filter(r => r.sellerReply).length / totalReviews) * 100).toFixed(1) : 0}%
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">This Month</span>
-              <span className="text-white font-medium">
-                {reviews.filter(r => new Date(r.createdAt).getMonth() === new Date().getMonth()).length}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Verified Purchases</span>
-              <span className="text-white font-medium">
-                {reviews.filter(r => r.isVerifiedPurchase).length}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-400">Avg Response Time</span>
-              <span className="text-white font-medium">2.4 hours</span>
-            </div>
-          </div>
-        </Card>
       </div>
+
+      {/* Section 3: Quick Stats Panel */}
+      <Card className="bg-[#111827] p-4 rounded-lg border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4">Response & Activity Metrics</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="flex justify-between">
+            <p className="text-gray-400 text-sm">Response Rate</p>
+            <p className="text-green-400 font-semibold text-sm">
+              {totalReviews > 0 ? ((reviews.filter(r => r.sellerReply).length / totalReviews) * 100).toFixed(1) : 0}%
+            </p>
+          </div>
+          <div className="flex justify-between">
+            <p className="text-gray-400 text-sm">This Month</p>
+            <p className="text-white font-semibold text-sm">
+              {reviews.filter(r => new Date(r.createdAt).getMonth() === new Date().getMonth()).length}
+            </p>
+          </div>
+          <div className="flex justify-between">
+            <p className="text-gray-400 text-sm">Verified Purchases</p>
+            <p className="text-white font-semibold text-sm">
+              {reviews.filter(r => r.isVerifiedPurchase).length}
+            </p>
+          </div>
+          <div className="flex justify-between">
+            <p className="text-gray-400 text-sm">Avg Response Time</p>
+            <p className="text-white font-semibold text-sm">2.4 hours</p>
+          </div>
+        </div>
+      </Card>
 
       {/* Reviews List */}
       <Card>

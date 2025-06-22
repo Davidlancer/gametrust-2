@@ -27,7 +27,10 @@ import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Badge from '../components/UI/Badge';
 import ChatPopup from '../components/UI/ChatPopup';
-import { featuredListings, mockSeller } from '../data/mockData';
+import ErrorBoundary from '../components/UI/ErrorBoundary';
+import { featuredListings, mockSeller, mockTransactions, mockCurrentUser, mockReviews, mockReportedSellers } from '../data/mockData';
+import StarRating from '../components/UI/StarRating';
+import Modal from '../components/UI/Modal';
 
 interface SellerProfileProps {
   sellerId?: string;
@@ -41,6 +44,15 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
   const [showReviews, setShowReviews] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportComment, setReportComment] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [hasReportedSeller, setHasReportedSeller] = useState(false);
 
   // Mock data - in real app, fetch from API
   const seller = mockSeller;
@@ -59,39 +71,133 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
     completionRate: 99.2
   };
 
-  const reviews = [
-    {
-      id: '1',
-      buyer: 'GamerX_2024',
-      rating: 5,
-      comment: 'Amazing seller! Account was exactly as described. Fast delivery and great communication throughout.',
-      accountPurchased: 'Legendary CODM Account',
-      timeAgo: '3 days ago',
-      verified: true
-    },
-    {
-      id: '2',
-      buyer: 'PUBGPro_99',
-      rating: 5,
-      comment: 'Very professional. Account works perfectly and all features were as promised. Highly recommend!',
-      accountPurchased: 'Conqueror PUBG Account',
-      timeAgo: '1 week ago',
-      verified: true
-    },
-    {
-      id: '3',
-      buyer: 'FireFighter_X',
-      rating: 4,
-      comment: 'Good account, minor delay in delivery but seller communicated well. Overall satisfied.',
-      accountPurchased: 'Grandmaster Free Fire',
-      timeAgo: '2 weeks ago',
-      verified: true
+  // Check if current user can leave a review
+  const canLeaveReview = () => {
+    if (!mockCurrentUser.isAuthenticated) return false;
+    
+    // Check if user has completed transactions with this seller
+    const userTransactions = mockTransactions.filter(
+      txn => txn.buyerId === mockCurrentUser.id && 
+             txn.sellerId === sellerId && 
+             txn.status === 'completed' && 
+             txn.escrowReleased && 
+             !txn.hasReviewed
+    );
+    
+    return userTransactions.length > 0;
+  };
+
+  // Get reviews for this seller
+  const reviews = mockReviews.filter(review => review.sellerId === sellerId);
+  
+  // Calculate time ago helper
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return 'Today';
+    if (diffInDays === 1) return '1 day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 14) return '1 week ago';
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    return `${Math.floor(diffInDays / 30)} months ago`;
+  };
+
+  // Handle review submission
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (reviewRating === 0) {
+      alert('Please select a rating');
+      return;
     }
-  ];
+    
+    setIsSubmittingReview(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In real app, make POST request to /api/review
+      console.log('Review submitted:', {
+        buyerId: mockCurrentUser.id,
+        sellerId,
+        rating: reviewRating,
+        comment: reviewComment
+      });
+      
+      // Reset form
+      setReviewRating(0);
+      setReviewComment('');
+      setShowReviewForm(false);
+      
+      alert('Review submitted successfully!');
+    } catch (error) {
+      alert('Failed to submit review. Please try again.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  // Check if user has already reported this seller
+  const checkIfReported = () => {
+    if (!mockCurrentUser.isAuthenticated) return false;
+    
+    const existingReport = mockReportedSellers.find(
+      report => report.reporterId === mockCurrentUser.id && report.sellerId === sellerId
+    );
+    
+    return !!existingReport;
+  };
+
+  // Handle report submission
+  const handleSubmitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!reportReason) {
+      alert('Please select a reason for reporting');
+      return;
+    }
+    
+    setIsSubmittingReport(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In real app, make POST request to /api/report-seller
+      const reportData = {
+        reporterId: mockCurrentUser.id,
+        sellerId,
+        reason: reportReason,
+        comment: reportComment,
+        timestamp: new Date()
+      };
+      
+      console.log('Report submitted:', reportData);
+      
+      // Reset form and close modal
+      setReportReason('');
+      setReportComment('');
+      setShowReportModal(false);
+      setHasReportedSeller(true);
+      
+      alert('Report submitted successfully. Our moderators will review it.');
+    } catch (error) {
+      alert('Failed to submit report. Please try again.');
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
 
   useEffect(() => {
     // Simulate loading
     const timer = setTimeout(() => setIsLoading(false), 1000);
+    
+    // Check if user has already reported this seller
+    setHasReportedSeller(checkIfReported());
+    
     return () => clearTimeout(timer);
   }, []);
 
@@ -208,7 +314,23 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
                       <MessageCircle className="mr-2 h-4 w-4" />
                       Message
                     </Button>
-                    <Button variant="ghost" size="md">
+                    <Button 
+                      variant="ghost" 
+                      size="md"
+                      onClick={() => {
+                        if (!mockCurrentUser.isAuthenticated) {
+                          alert('Please log in to report a seller');
+                          return;
+                        }
+                        if (hasReportedSeller) {
+                          alert('You have already reported this seller');
+                          return;
+                        }
+                        setShowReportModal(true);
+                      }}
+                      className={hasReportedSeller ? 'opacity-50 cursor-not-allowed' : ''}
+                      disabled={hasReportedSeller}
+                    >
                       <Flag className="h-4 w-4" />
                     </Button>
                   </div>
@@ -422,55 +544,121 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
               <h3 className="text-xl font-semibold text-white mb-2">Customer Reviews</h3>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
+                  <StarRating rating={sellerStats.averageRating} readonly size="sm" />
                   <span className="text-white font-medium">{sellerStats.averageRating}</span>
-                  <span className="text-gray-400">({sellerStats.totalReviews} reviews)</span>
+                  <span className="text-gray-400">({reviews.length} reviews)</span>
                 </div>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowReviews(!showReviews)}
-            >
-              {showReviews ? 'Hide Reviews' : 'Show All Reviews'}
-            </Button>
+            <div className="flex space-x-3">
+              {canLeaveReview() && (
+                <Button 
+                  variant="primary"
+                  onClick={() => setShowReviewForm(!showReviewForm)}
+                >
+                  {showReviewForm ? 'Cancel Review' : 'Leave a Review'}
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                onClick={() => setShowReviews(!showReviews)}
+              >
+                {showReviews ? 'Hide Reviews' : 'Show All Reviews'}
+              </Button>
+            </div>
           </div>
+
+          {/* Review Form */}
+          {showReviewForm && canLeaveReview() && (
+            <div className="mb-8 p-6 bg-gray-800/50 rounded-lg border border-gray-700">
+              <h4 className="text-lg font-semibold text-white mb-4">Leave a Review</h4>
+              <form onSubmit={handleSubmitReview}>
+                <div className="mb-4">
+                  <label className="block mb-2 font-medium text-white">Rate this seller:</label>
+                  <StarRating 
+                    rating={reviewRating} 
+                    onChange={setReviewRating}
+                    size="lg"
+                  />
+                </div>
+                
+                <div className="mb-4">
+                  <textarea 
+                    placeholder="Leave a short review (optional)"
+                    className="w-full p-3 rounded-md bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    rows={4}
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    maxLength={500}
+                  />
+                  <div className="text-right text-sm text-gray-400 mt-1">
+                    {reviewComment.length}/500
+                  </div>
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Button 
+                    type="submit" 
+                    disabled={reviewRating === 0 || isSubmittingReview}
+                    className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+                  </Button>
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowReviewForm(false);
+                      setReviewRating(0);
+                      setReviewComment('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {showReviews && (
             <div className="space-y-6">
-              {reviews.map((review) => (
-                <div key={review.id} className="border-b border-gray-700 pb-6 last:border-b-0">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
-                      <span className="text-white font-medium text-sm">
-                        {review.buyer.charAt(0)}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="font-medium text-white">{review.buyer}</span>
-                        {review.verified && (
-                          <Badge type="verified" size="sm" text="Verified Purchase" />
-                        )}
-                        <span className="text-sm text-gray-400">{review.timeAgo}</span>
+              {reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review.id} className="border-b border-gray-700 pb-6 last:border-b-0">
+                    <div className="flex items-start space-x-4">
+                      <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
+                        <span className="text-white font-medium text-sm">
+                          {review.buyerUsername.charAt(0)}
+                        </span>
                       </div>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <div className="flex items-center">
-                          {[...Array(review.rating)].map((_, i) => (
-                            <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                          ))}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <span className="font-medium text-white">{review.buyerUsername}</span>
+                          {review.verified && (
+                            <Badge type="verified" size="sm" text="Verified Purchase" />
+                          )}
+                          <span className="text-sm text-gray-400">{getTimeAgo(review.createdAt)}</span>
                         </div>
-                        <span className="text-sm text-gray-400">• {review.accountPurchased}</span>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <StarRating rating={review.rating} readonly size="sm" />
+                          <span className="text-sm text-gray-400">• {review.accountPurchased}</span>
+                        </div>
+                        {review.comment && (
+                          <p className="text-gray-300 leading-relaxed">{review.comment}</p>
+                        )}
                       </div>
-                      <p className="text-gray-300 leading-relaxed">{review.comment}</p>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Star className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <h4 className="text-lg font-medium text-white mb-2">No Reviews Yet</h4>
+                  <p className="text-gray-400">Be the first to leave a review for this seller!</p>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </Card>
@@ -499,21 +687,105 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
       </div>
 
       {/* Chat Popup */}
-      <ChatPopup
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        seller={{
-          id: seller.id,
-          username: seller.username,
-          avatar: seller.avatar,
-          isOnline: true,
-          lastSeen: sellerStats.lastSeen
-        }}
-        onSendMessage={(message) => {
-          console.log('Message sent:', message);
-          // Here you would typically send the message to your backend
-        }}
-      />
+      <ErrorBoundary
+        fallback={
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 max-w-md mx-4 text-center">
+              <div className="text-red-600 text-lg font-semibold mb-2">
+                Chat Error
+              </div>
+              <p className="text-gray-600 mb-4">
+                The chat failed to load. Please try again.
+              </p>
+              <button
+                onClick={() => setIsChatOpen(false)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Close Chat
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <ChatPopup
+          isOpen={isChatOpen}
+          onClose={() => setIsChatOpen(false)}
+          seller={{
+            id: seller.id,
+            username: seller.username,
+            avatar: seller.avatar,
+            isOnline: true,
+            lastSeen: sellerStats.lastSeen
+          }}
+          onSendMessage={(message) => {
+            console.log('Message sent:', message);
+            // Here you would typically send the message to your backend
+          }}
+        />
+
+        {/* Report Seller Modal */}
+        <Modal
+          isOpen={showReportModal}
+          onClose={() => {
+            setShowReportModal(false);
+            setReportReason('');
+            setReportComment('');
+          }}
+          title="Report Seller"
+          size="md"
+        >
+          <form onSubmit={handleSubmitReport}>
+            <p className="mb-4 text-gray-300">
+              Tell us why you're reporting this seller. Our moderators will review it.
+            </p>
+
+            <select 
+              className="w-full mb-4 p-3 rounded-md bg-[#1e1e1e] text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              required
+            >
+              <option value="">Select reason</option>
+              <option value="scam">Scam / fraud</option>
+              <option value="abusive">Abusive behavior</option>
+              <option value="fake_info">Fake account information</option>
+              <option value="spam">Spam or irrelevant listings</option>
+              <option value="other">Other</option>
+            </select>
+
+            <textarea 
+              placeholder="Add any details (optional)"
+              className="w-full p-3 rounded-md bg-[#1e1e1e] text-white border border-gray-600 focus:border-blue-500 focus:outline-none resize-none"
+              rows={4}
+              value={reportComment}
+              onChange={(e) => setReportComment(e.target.value)}
+            />
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason('');
+                  setReportComment('');
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isSubmittingReport || !reportReason}
+                className="flex-1"
+              >
+                {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      </ErrorBoundary>
     </div>
   );
 };

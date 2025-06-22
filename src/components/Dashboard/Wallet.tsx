@@ -17,16 +17,24 @@ import {
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
+import { mockWalletTransactions } from '../../data/mockData';
 
 interface Transaction {
   id: string;
-  type: 'earning' | 'withdrawal' | 'promotion' | 'refund' | 'escrow_release';
+  type: 'purchase' | 'sale' | 'escrow_hold' | 'withdrawal' | 'refund' | 'in_escrow';
   amount: number;
-  description: string;
+  status: 'completed' | 'pending' | 'failed' | 'in_escrow';
   date: string;
-  status: 'completed' | 'pending' | 'failed';
-  reference?: string;
-  orderId?: string;
+  relatedListing?: {
+    title: string;
+    listingId: string;
+  } | null;
+  counterparty?: {
+    username: string;
+    userId: string;
+  } | null;
+  reference: string;
+  bankDetails?: string;
 }
 
 interface BankDetails {
@@ -35,72 +43,8 @@ interface BankDetails {
   accountName: string;
 }
 
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    type: 'escrow_release',
-    amount: 45000,
-    description: 'CODM Legendary Account sale to @gamer123',
-    date: '2024-01-20T14:30:00Z',
-    status: 'completed',
-    reference: 'ESC_001234',
-    orderId: '1'
-  },
-  {
-    id: '2',
-    type: 'withdrawal',
-    amount: -30000,
-    description: 'Withdrawal to GTBank ****1234',
-    date: '2024-01-19T10:15:00Z',
-    status: 'completed',
-    reference: 'WTH_005678'
-  },
-  {
-    id: '3',
-    type: 'escrow_release',
-    amount: 28500,
-    description: 'PUBG Mobile Conqueror Account sale',
-    date: '2024-01-18T16:45:00Z',
-    status: 'completed',
-    reference: 'ESC_001235'
-  },
-  {
-    id: '4',
-    type: 'promotion',
-    amount: -500,
-    description: 'Listing promotion - CODM Account',
-    date: '2024-01-17T09:20:00Z',
-    status: 'completed',
-    reference: 'PRO_001122'
-  },
-  {
-    id: '5',
-    type: 'escrow_release',
-    amount: 15000,
-    description: 'Free Fire Grandmaster Account sale',
-    date: '2024-01-16T13:10:00Z',
-    status: 'completed',
-    reference: 'ESC_001236'
-  },
-  {
-    id: '6',
-    type: 'withdrawal',
-    amount: -25000,
-    description: 'Withdrawal to Access Bank ****5678',
-    date: '2024-01-15T11:30:00Z',
-    status: 'pending',
-    reference: 'WTH_005679'
-  },
-  {
-    id: '7',
-    type: 'refund',
-    amount: -22000,
-    description: 'Refund for disputed Valorant account',
-    date: '2024-01-14T08:45:00Z',
-    status: 'completed',
-    reference: 'REF_001100'
-  }
-];
+// Use enhanced transaction data from mockData
+const mockTransactions: Transaction[] = mockWalletTransactions as Transaction[];
 
 const mockBankDetails: BankDetails = {
   bankName: 'GTBank',
@@ -108,28 +52,26 @@ const mockBankDetails: BankDetails = {
   accountName: 'BLUNT SELLER'
 };
 
-const getTransactionIcon = (type: string) => {
+const getTransactionIcon = (type: Transaction['type']) => {
   switch (type) {
-    case 'earning':
-    case 'escrow_release':
+    case 'purchase':
+      return <ArrowUpIcon className="w-5 h-5 text-red-400" />;
+    case 'sale':
       return <ArrowDownIcon className="w-5 h-5 text-green-400" />;
+    case 'escrow_hold':
+      return <ClockIcon className="w-5 h-5 text-purple-400" />;
     case 'withdrawal':
       return <ArrowUpIcon className="w-5 h-5 text-red-400" />;
-    case 'promotion':
-      return <ArrowUpIcon className="w-5 h-5 text-yellow-400" />;
     case 'refund':
-      return <ArrowUpIcon className="w-5 h-5 text-orange-400" />;
+      return <ArrowDownIcon className="w-5 h-5 text-blue-400" />;
+    case 'in_escrow':
+      return <ClockIcon className="w-5 h-5 text-purple-400" />;
     default:
       return <WalletIcon className="w-5 h-5 text-gray-400" />;
   }
 };
 
-const getTransactionColor = (type: string, amount: number) => {
-  if (amount > 0) return 'text-green-400';
-  return 'text-red-400';
-};
-
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: Transaction['status']) => {
   switch (status) {
     case 'completed':
       return (
@@ -152,9 +94,55 @@ const getStatusBadge = (status: string) => {
           Failed
         </Badge>
       );
+    case 'in_escrow':
+      return (
+        <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 border">
+          <ClockIcon className="w-3 h-3 mr-1" />
+          In Escrow
+        </Badge>
+      );
     default:
       return null;
   }
+};
+
+const getTransactionTypeLabel = (type: Transaction['type']) => {
+  switch (type) {
+    case 'purchase':
+      return 'Purchase';
+    case 'sale':
+      return 'Sale';
+    case 'escrow_hold':
+      return 'Escrow Hold';
+    case 'withdrawal':
+      return 'Withdrawal';
+    case 'refund':
+      return 'Refund';
+    case 'in_escrow':
+      return 'In Escrow';
+    default:
+      return 'Transaction';
+  }
+};
+
+const formatTransactionDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const formatAmount = (amount: number) => {
+  const isCredit = amount > 0;
+  const formattedAmount = Math.abs(amount).toLocaleString();
+  return {
+    display: `${isCredit ? '+' : '-'}₦${formattedAmount}`,
+    colorClass: isCredit ? 'text-green-600' : 'text-red-600'
+  };
 };
 
 const Wallet: React.FC = () => {
@@ -401,66 +389,149 @@ const Wallet: React.FC = () => {
               className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent"
             >
               <option value="all">All Transactions</option>
-              <option value="earning">Earnings</option>
-              <option value="escrow_release">Escrow Releases</option>
+              <option value="purchase">Purchases</option>
+              <option value="sale">Sales</option>
+              <option value="escrow_hold">Escrow Hold</option>
               <option value="withdrawal">Withdrawals</option>
-              <option value="promotion">Promotions</option>
               <option value="refund">Refunds</option>
+              <option value="in_escrow">In Escrow</option>
             </select>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {filteredTransactions.map((transaction, index) => (
-            <motion.div
-              key={transaction.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="flex-shrink-0">
-                  {getTransactionIcon(transaction.type)}
-                </div>
-                <div>
-                  <p className="text-white font-medium">{transaction.description}</p>
-                  <div className="flex items-center space-x-4 mt-1">
-                    <div className="flex items-center space-x-1 text-sm text-gray-400">
-                      <CalendarIcon className="w-4 h-4" />
-                      <span>{new Date(transaction.date).toLocaleDateString()}</span>
-                    </div>
-                    {transaction.reference && (
-                      <span className="text-sm text-gray-500">Ref: {transaction.reference}</span>
-                    )}
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Type</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Listing</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Party</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Amount</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Date</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTransactions.map((transaction, index) => {
+                const amountInfo = formatAmount(transaction.amount);
+                return (
+                  <motion.tr
+                    key={transaction.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="border-b border-gray-800 hover:bg-gray-800/30 transition-colors"
+                  >
+                    <td className="py-4 px-4">
+                      <div className="flex items-center space-x-3">
+                        {getTransactionIcon(transaction.type)}
+                        <span className="text-white font-medium">{getTransactionTypeLabel(transaction.type)}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      {transaction.relatedListing ? (
+                        <div>
+                          <p className="text-white font-medium">{transaction.relatedListing.title}</p>
+                          <p className="text-sm text-gray-400">ID: {transaction.relatedListing.listingId}</p>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
+                      {transaction.counterparty ? (
+                        <div>
+                          <p className="text-white font-medium">@{transaction.counterparty.username}</p>
+                          <p className="text-sm text-gray-400">{transaction.type === 'purchase' ? 'Seller' : 'Buyer'}</p>
+                        </div>
+                      ) : transaction.bankDetails ? (
+                        <div>
+                          <p className="text-white font-medium">{transaction.bankDetails}</p>
+                          <p className="text-sm text-gray-400">Bank Account</p>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`text-lg font-semibold ${amountInfo.colorClass}`}>
+                        {amountInfo.display}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-white">{formatTransactionDate(transaction.date)}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      {getStatusBadge(transaction.status)}
+                    </td>
+                  </motion.tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {filteredTransactions.map((transaction, index) => {
+            const amountInfo = formatAmount(transaction.amount);
+            return (
+              <motion.div
+                key={transaction.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    {getTransactionIcon(transaction.type)}
+                    <span className="text-white font-medium">{getTransactionTypeLabel(transaction.type)}</span>
                   </div>
+                  <span className={`text-lg font-semibold ${amountInfo.colorClass}`}>
+                    {amountInfo.display}
+                  </span>
                 </div>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <p className={`text-lg font-semibold ${getTransactionColor(transaction.type, transaction.amount)}`}>
-                    {transaction.amount > 0 ? '+' : ''}₦{Math.abs(transaction.amount).toLocaleString()}
-                  </p>
-                  <div className="mt-1">
-                    {getStatusBadge(transaction.status)}
+                
+                {transaction.relatedListing && (
+                  <div className="mb-2">
+                    <p className="text-sm text-gray-400">Listing:</p>
+                    <p className="text-white font-medium">{transaction.relatedListing.title}</p>
                   </div>
+                )}
+                
+                {transaction.counterparty && (
+                  <div className="mb-2">
+                    <p className="text-sm text-gray-400">{transaction.type === 'purchase' ? 'Seller:' : 'Buyer:'}</p>
+                    <p className="text-white font-medium">@{transaction.counterparty.username}</p>
+                  </div>
+                )}
+                
+                {transaction.bankDetails && (
+                  <div className="mb-2">
+                    <p className="text-sm text-gray-400">Bank:</p>
+                    <p className="text-white font-medium">{transaction.bankDetails}</p>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-sm text-gray-400">{formatTransactionDate(transaction.date)}</span>
+                  {getStatusBadge(transaction.status)}
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
 
         {filteredTransactions.length === 0 && (
-          <div className="text-center py-8">
+          <div className="text-center py-12">
             <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
               <WalletIcon className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">No transactions found</h3>
-            <p className="text-gray-400">
-              {searchTerm || filter !== 'all' 
-                ? 'Try adjusting your search or filter criteria.'
-                : 'Your transaction history will appear here.'}
+            <h4 className="text-lg font-medium text-white mb-2">No Transactions Yet</h4>
+            <p className="text-gray-400 max-w-md mx-auto">
+              You haven't made any transactions yet. Once you buy or sell an account, your history will appear here.
             </p>
           </div>
         )}

@@ -81,7 +81,7 @@ const Platforms: React.FC<PlatformsProps> = ({ onNavigate }) => {
                   <div className="flex space-x-3">
                     <Button 
                       size="sm"
-                      onClick={() => onNavigate('marketplace')}
+                      onClick={() => onNavigate(`marketplace?game=${game.id}`)}
                       className="group"
                     >
                       <span>View Listings</span>

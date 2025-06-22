@@ -38,15 +38,25 @@ function App() {
   const [devMode] = useState<boolean>(true); // Testing mode toggle
 
   const handleNavigate = (page: string, id?: string) => {
-    if (page === 'listing-details' && id) {
+    // Parse URL with query parameters
+    let targetPage = page;
+    let queryString = '';
+    
+    if (page.includes('?')) {
+      const [pageName, query] = page.split('?');
+      targetPage = pageName;
+      queryString = query;
+    }
+    
+    if (targetPage === 'listing-details' && id) {
       setSelectedListingId(id);
     }
-    if (page === 'seller-profile' && id) {
+    if (targetPage === 'seller-profile' && id) {
       setSelectedSellerId(id);
     }
     
     // Handle wallet navigation based on current user role
-    if (page === 'wallet') {
+    if (targetPage === 'wallet') {
       const currentRole = localStorage.getItem('userRole') || 'buyer';
       if (currentRole === 'seller') {
         setCurrentPage('seller-dashboard');
@@ -66,7 +76,11 @@ function App() {
       return;
     }
     
-    setCurrentPage(page as Page);
+    // Update browser URL with query parameters
+    const newUrl = queryString ? `/${targetPage}?${queryString}` : `/${targetPage}`;
+    window.history.pushState({}, '', newUrl);
+    
+    setCurrentPage(targetPage as Page);
   };
 
   const handleLogout = () => {
@@ -107,6 +121,23 @@ function App() {
       setCurrentPage('buyer-dashboard');
     }
   };
+
+  // Handle browser navigation and initial URL parsing
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.slice(1) || 'home';
+      setCurrentPage(path as Page);
+    };
+    
+    // Parse initial URL
+    const initialPath = window.location.pathname.slice(1) || 'home';
+    if (initialPath !== 'home') {
+      setCurrentPage(initialPath as Page);
+    }
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Check authentication and onboarding status on app load
   useEffect(() => {

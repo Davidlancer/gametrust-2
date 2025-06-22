@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, Grid, List, Star } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Badge from '../components/UI/Badge';
@@ -15,6 +15,20 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('newest');
   const [filters, setFilters] = useState<FilterOptions>({});
+
+  // Handle query parameters on component mount
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const gameFilter = queryParams.get('game');
+    
+    if (gameFilter) {
+      // Find the game name by ID
+      const selectedGame = games.find(game => game.id === gameFilter);
+      if (selectedGame) {
+        setFilters(prev => ({ ...prev, game: selectedGame.name }));
+      }
+    }
+  }, []);
 
   const filteredListings = featuredListings.filter(listing => {
     const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -36,6 +50,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
           <p className="text-xl text-gray-400">
             Discover premium gaming accounts from verified sellers
           </p>
+          {/* Active Filter Badge */}
+          {filters.game && (
+            <div className="mt-4">
+              <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                Filtered by: {filters.game}
+              </Badge>
+            </div>
+          )}
         </div>
 
         {/* Search and Filters */}

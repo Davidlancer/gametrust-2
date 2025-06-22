@@ -85,9 +85,9 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Media Section */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - All scrollable content */}
+          <div className="col-span-2 space-y-6">
             {/* Main Image Display */}
             <Card padding="none" className="overflow-hidden">
               <div className="relative aspect-video bg-gray-800">
@@ -257,10 +257,11 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
             </Card>
           </div>
 
-          {/* Right Column - Purchase Section */}
-          <div className="space-y-6">
-            {/* Purchase Card */}
-            <Card className="sticky top-24">
+          {/* Right Column - Sticky Payment Container */}
+          <div className="col-span-1">
+            <div className="relative md:sticky md:top-24 md:self-start">
+              {/* Purchase Card */}
+              <Card>
               <div className="space-y-6">
                 {/* Game Info */}
                 <div className="flex items-center space-x-3">
@@ -314,10 +315,10 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                   </div>
                 </div>
               </div>
-            </Card>
+              </Card>
 
-            {/* Seller Card */}
-            <Card>
+              {/* Seller Card */}
+              <Card className="mt-6">
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white">Seller Information</h3>
                 
@@ -358,27 +359,48 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                   </Button>
                 </div>
               </div>
-            </Card>
+              </Card>
 
-            {/* Similar Listings */}
-            <Card>
+              {/* Similar Listings */}
+              <Card className="mt-6">
               <h3 className="text-lg font-semibold text-white mb-4">Similar Listings</h3>
               <div className="space-y-3">
-                {featuredListings.slice(0, 3).map((similar) => (
-                  <div key={similar.id} className="flex items-center space-x-3 p-3 bg-gray-700/20 rounded-lg hover:bg-gray-700/40 transition-colors cursor-pointer">
-                    <img
-                      src={similar.images[0]}
-                      alt={similar.title}
-                      className="w-12 h-12 rounded-lg object-cover"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{similar.title}</p>
-                      <p className="text-xs text-gray-400">${similar.price}</p>
-                    </div>
-                  </div>
-                ))}
+                {(() => {
+                  // Get current listing info
+                  const { id, game, price } = listing;
+                  
+                  // Filter for similar listings
+                  const similarListings = featuredListings.filter((item) => 
+                    item.id !== id && 
+                    item.game === game && 
+                    Math.abs(item.price - price) <= 10000
+                  );
+                  
+                  return similarListings.length > 0 ? (
+                    similarListings.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className="flex items-center space-x-3 p-3 bg-gray-700/20 rounded-lg hover:bg-gray-700/40 transition-colors cursor-pointer"
+                        onClick={() => onNavigate('listing-details', item.id)}
+                      >
+                        <img
+                          src={item.images[0]}
+                          alt={item.title}
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{item.title}</p>
+                          <p className="text-xs text-gray-400">₦{item.price}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-400 italic">No similar listings available.</p>
+                  );
+                })()}
               </div>
-            </Card>
+              </Card>
+            </div>
           </div>
         </div>
       </div>

@@ -87,7 +87,14 @@ const mockProfile: SellerProfile = {
 };
 
 const Settings: React.FC = () => {
-  const [profile, setProfile] = useState(mockProfile);
+  const [profile, setProfile] = useState(() => {
+    // Load saved profile image from localStorage
+    const savedImage = localStorage.getItem('userProfileImage');
+    return {
+      ...mockProfile,
+      avatar: savedImage || mockProfile.avatar
+    };
+  });
   const [activeTab, setActiveTab] = useState('profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -132,15 +139,51 @@ const Settings: React.FC = () => {
   };
 
   const handleAvatarUpload = () => {
+    // Trigger the hidden file input
+    const fileInput = document.getElementById('profileUpload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  };
+
+  const handleProfileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File size must be less than 2MB');
+      return;
+    }
+
     setIsUploading(true);
-    // Simulate file upload
-    setTimeout(() => {
+    
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const imgData = e.target?.result as string;
+      
+      // Update the profile avatar
       setProfile(prev => ({
         ...prev,
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face'
+        avatar: imgData
       }));
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('userProfileImage', imgData);
+      
       setIsUploading(false);
-    }, 2000);
+    };
+    
+    reader.readAsDataURL(file);
+    
+    // Reset the input value so the same file can be selected again
+    event.target.value = '';
   };
 
   const handleNotificationChange = (category: 'emailNotifications' | 'pushNotifications', setting: string, value: boolean) => {
@@ -174,9 +217,11 @@ const Settings: React.FC = () => {
         <div className="flex items-center space-x-6">
           <div className="relative">
             <img
+              id="profilePic"
               src={profile.avatar}
               alt="Profile"
-              className="w-24 h-24 rounded-full object-cover"
+              className="w-24 h-24 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleAvatarUpload}
             />
             {isUploading && (
               <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
@@ -196,8 +241,20 @@ const Settings: React.FC = () => {
             <p className="text-gray-400 text-sm mt-2">
               JPG, PNG or GIF. Max size 2MB.
             </p>
+            <p className="text-gray-500 text-xs mt-1">
+              Click on the image or button to select a new photo
+            </p>
           </div>
         </div>
+        
+        {/* Hidden file input */}
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          id="profileUpload"
+          onChange={handleProfileUpload}
+        />
       </Card>
 
       {/* Basic Information */}

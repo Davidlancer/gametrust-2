@@ -371,23 +371,23 @@ const Disputes: React.FC = () => {
         {/* Disputes List */}
         <div className="lg:col-span-1">
           <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">All Disputes</h3>
-              <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center justify-between gap-4 w-full mb-4">
+              <h3 className="text-xl font-semibold text-white whitespace-nowrap">All Disputes</h3>
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder="Search disputes..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent"
+                    className="pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent w-full md:w-64"
                   />
                 </div>
                 <select
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent"
+                  className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent w-full md:w-48"
                 >
                   <option value="all">All</option>
                   <option value="open">Open</option>
