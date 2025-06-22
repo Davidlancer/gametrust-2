@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Paperclip, Smile, Phone, Video, Info, Mic, MicOff, Reply } from 'lucide-react';
+import { X, Send, Paperclip, Smile, Phone, Video, Info, Mic, MicOff, Reply, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSwipeable } from 'react-swipeable';
+import { useEscrow } from '../../hooks/useEscrow';
 import Button from './Button';
+import CallDisputeModal from './CallDisputeModal';
 
 interface Message {
   id: string;
@@ -34,6 +36,113 @@ interface ChatPopupProps {
   onSendMessage?: (message: string) => void;
 }
 
+interface MessageItemProps {
+  msg: Message;
+  index: number;
+  seller: {
+    id: string;
+    username: string;
+    avatar: string;
+    isOnline: boolean;
+    lastSeen?: string;
+  };
+  startReply: (message: Message) => void;
+  renderMessageContent: (msg: Message) => React.ReactNode;
+  formatTime: (date: Date) => string;
+}
+
+// Separate MessageItem component to avoid hook violations
+const MessageItem: React.FC<MessageItemProps> = ({ 
+  msg, 
+  index, 
+  seller, 
+  startReply, 
+  renderMessageContent, 
+  formatTime 
+}) => {
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => startReply(msg),
+    preventDefaultTouchmoveEvent: true,
+    trackMouse: false
+  });
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20, scale: 0.8 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 500, 
+        damping: 30,
+        delay: index * 0.1 
+      }}
+      className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+    >
+      <div className={`max-w-[80%] ${msg.sender === 'user' ? 'order-2' : 'order-1'}`}>
+        <div {...swipeHandlers} className="group relative">
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            className={`px-4 py-3 rounded-2xl shadow-lg backdrop-blur-sm border relative ${
+              msg.sender === 'user' 
+                ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white border-white/20 shadow-indigo-500/25' 
+                : 'bg-gray-700/80 text-gray-100 border-gray-600/50 shadow-gray-900/50'
+            }`}
+          >
+            {renderMessageContent(msg)}
+            
+            {/* Desktop Reply Button */}
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileHover={{ opacity: 1, scale: 1 }}
+              className="absolute -right-8 top-1/2 transform -translate-y-1/2 hidden group-hover:block md:block p-1 bg-gray-600/80 hover:bg-gray-500/80 rounded-full transition-all duration-200"
+              onClick={() => startReply(msg)}
+            >
+              <Reply className="h-3 w-3 text-gray-300" />
+            </motion.button>
+            
+            {/* Message glow effect */}
+            {msg.sender === 'user' && (
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 -z-10 blur-sm" />
+            )}
+          </motion.div>
+        </div>
+        <div className={`flex items-center mt-1 space-x-1 text-xs text-gray-400 ${
+          msg.sender === 'user' ? 'justify-end' : 'justify-start'
+        }`}>
+          <span>{formatTime(msg.timestamp)}</span>
+          {msg.sender === 'user' && msg.status && (
+            <span className={`${
+              msg.status === 'read' ? 'text-blue-400' : 
+              msg.status === 'delivered' ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
+            </span>
+          )}
+        </div>
+      </div>
+      
+      {msg.sender === 'seller' && (
+        <motion.div 
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="w-8 h-8 rounded-full overflow-hidden ml-2 order-2 border-2 border-gray-600/50 shadow-lg"
+        >
+          <img 
+            src={seller?.avatar || '/default-avatar.png'} 
+            alt={seller?.username || 'User'} 
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM2MzYzNjMiLz4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMTJDMTAuMjA5MSAxMiAxMiAxMC4yMDkxIDEyIDhDMTIgNS43OTA5IDEwLjIwOTEgNCA4IDRDNS43OTA5IDQgNCA1Ljc5MDkgNCA4QzQgMTAuMjA5MSA1Ljc5MDkgMTIgOCAxMloiIGZpbGw9IndoaXRlIi8+CjwvcGF0aD4KPC9zdmc+Cjwvc3ZnPgo=';
+            }}
+          />
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+
 const ChatPopup: React.FC<ChatPopupProps> = ({ 
   isOpen, 
   onClose, 
@@ -47,8 +156,10 @@ const ChatPopup: React.FC<ChatPopupProps> = ({
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { updateEscrowStatus } = useEscrow();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -156,6 +267,11 @@ const ChatPopup: React.FC<ChatPopupProps> = ({
 
   const cancelReply = () => {
     setReplyTo(null);
+  };
+
+  const handleDispute = () => {
+    updateEscrowStatus('disputed', 'User initiated dispute from chat');
+    setShowDisputeModal(true);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -518,6 +634,15 @@ const ChatPopup: React.FC<ChatPopupProps> = ({
               <Info className="h-4 w-4 text-white drop-shadow-sm" />
             </motion.button>
             <motion.button 
+              onClick={handleDispute}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2 hover:bg-red-500/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-red-400/50"
+              title="Call Dispute"
+            >
+              <AlertTriangle className="h-4 w-4 text-red-400 drop-shadow-sm" />
+            </motion.button>
+            <motion.button 
               onClick={onClose}
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.95 }}
@@ -548,90 +673,19 @@ const ChatPopup: React.FC<ChatPopupProps> = ({
                   </div>
                 );
               }
-
-              const swipeHandlers = useSwipeable({
-                onSwipedLeft: () => startReply(msg),
-                preventDefaultTouchmoveEvent: true,
-                trackMouse: false
-              });
             
-            return (
-              <motion.div 
-                key={msg.id} 
-                initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 500, 
-                  damping: 30,
-                  delay: index * 0.1 
-                }}
-                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[80%] ${msg.sender === 'user' ? 'order-2' : 'order-1'}`}>
-                  <div {...swipeHandlers} className="group relative">
-                    <motion.div 
-                      whileHover={{ scale: 1.02 }}
-                      className={`px-4 py-3 rounded-2xl shadow-lg backdrop-blur-sm border relative ${
-                        msg.sender === 'user' 
-                          ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white border-white/20 shadow-indigo-500/25' 
-                          : 'bg-gray-700/80 text-gray-100 border-gray-600/50 shadow-gray-900/50'
-                      }`}
-                    >
-                      {renderMessageContent(msg)}
-                      
-                      {/* Desktop Reply Button */}
-                      <motion.button
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        whileHover={{ opacity: 1, scale: 1 }}
-                        className="absolute -right-8 top-1/2 transform -translate-y-1/2 hidden group-hover:block md:block p-1 bg-gray-600/80 hover:bg-gray-500/80 rounded-full transition-all duration-200"
-                        onClick={() => startReply(msg)}
-                      >
-                        <Reply className="h-3 w-3 text-gray-300" />
-                      </motion.button>
-                      
-                      {/* Message glow effect */}
-                      {msg.sender === 'user' && (
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 -z-10 blur-sm" />
-                      )}
-                    </motion.div>
-                  </div>
-                <div className={`flex items-center mt-1 space-x-1 text-xs text-gray-400 ${
-                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                }`}>
-                  <span>{formatTime(msg.timestamp)}</span>
-                  {msg.sender === 'user' && msg.status && (
-                    <span className={`${
-                      msg.status === 'read' ? 'text-blue-400' : 
-                      msg.status === 'delivered' ? 'text-gray-400' : 'text-gray-500'
-                    }`}>
-                      {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              {msg.sender === 'seller' && (
-                <motion.div 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="w-8 h-8 rounded-full overflow-hidden ml-2 order-2 border-2 border-gray-600/50 shadow-lg"
-                >
-                  <img 
-                    src={seller?.avatar || '/default-avatar.png'} 
-                    alt={seller?.username || 'User'} 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM2MzYzNjMiLz4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTggMTJDMTAuMjA5MSAxMiAxMiAxMC4yMDkxIDEyIDhDMTIgNS43OTA5IDEwLjIwOTEgNCA4IDRDNS43OTA5IDQgNCA1Ljc5MDkgNCA4QzQgMTAuMjA5MSA1Ljc5MDkgMTIgOCAxMloiIGZpbGw9IndoaXRlIi8+CjwvcGF0aD4KPC9zdmc+Cjwvc3ZnPgo=';
-                    }}
-                  />
-                </motion.div>
-              )}
-            </motion.div>
-          );
-          })
+              return (
+                <MessageItem 
+                  key={msg.id}
+                  msg={msg}
+                  index={index}
+                  seller={seller}
+                  startReply={startReply}
+                  renderMessageContent={renderMessageContent}
+                  formatTime={formatTime}
+                />
+              );
+            })
           ) : (
             <div className="flex items-center justify-center h-32">
               <p className="text-gray-400 italic text-sm">No messages found.</p>
@@ -845,6 +899,16 @@ const ChatPopup: React.FC<ChatPopupProps> = ({
           </div>
         </div>
       </motion.div>
+      
+      {/* Call Dispute Modal */}
+      <CallDisputeModal 
+        isOpen={showDisputeModal}
+        onClose={() => setShowDisputeModal(false)}
+        onConfirm={() => {
+          // Additional logic can be added here if needed
+          console.log('Dispute confirmed and logged');
+        }}
+      />
     </AnimatePresence>
   );
 };

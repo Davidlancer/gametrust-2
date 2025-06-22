@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   WalletIcon,
@@ -17,7 +17,10 @@ import {
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
+import Spinner from '../UI/Spinner';
 import { mockWalletTransactions } from '../../data/mockData';
+import { useEscrow } from '../../hooks/useEscrow';
+import EscrowStatusCard from '../UI/EscrowStatusCard';
 
 interface Transaction {
   id: string;
@@ -145,7 +148,49 @@ const formatAmount = (amount: number) => {
   };
 };
 
-const Wallet: React.FC = () => {
+// Error Boundary Component
+class WalletErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Wallet Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">Something went wrong</h3>
+            <p className="text-gray-400 mb-4">We're having trouble loading your wallet.</p>
+            <Button
+              variant="primary"
+              onClick={() => window.location.reload()}
+            >
+              Reload Page
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Main Wallet Section Component
+const WalletSection: React.FC = () => {
   const [transactions, setTransactions] = useState(mockTransactions);
   const [bankDetails, setBankDetails] = useState(mockBankDetails);
   const [showBalance, setShowBalance] = useState(true);
@@ -154,40 +199,151 @@ const Wallet: React.FC = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [isEditingBank, setIsEditingBank] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  
+  // Safe escrow hook usage with error handling
+  let escrowData = null;
+  let escrowError = null;
+  try {
+    const { escrow, error } = useEscrow();
+    escrowData = escrow;
+    escrowError = error;
+  } catch (hookError) {
+    console.error('useEscrow hook error:', hookError);
+    escrowError = 'Failed to load escrow data';
+  }
 
+  // Safe fallbacks for wallet data
   const currentBalance = 125450; // This would come from API
-  const pendingWithdrawals = transactions
-    .filter(t => t.type === 'withdrawal' && t.status === 'pending')
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const safeTransactions = transactions || [];
+  const safeBankDetails = bankDetails || { bankName: '', accountNumber: '', accountName: '' };
+  const escrowAmount = escrowData?.amount || 0;
+  const escrowStatus = escrowData?.status || null;
+  
+  // Debug logging
+  console.log('Wallet Load:', { 
+    balance: currentBalance, 
+    transactions: safeTransactions.length, 
+    escrow: escrowData,
+    escrowError,
+    walletError 
+  });
+  
+  const pendingWithdrawals = safeTransactions
+    .filter(t => t?.type === 'withdrawal' && t?.status === 'pending')
+    .reduce((sum, t) => sum + Math.abs(t?.amount || 0), 0);
+
+  // Initialize component with loading state and error handling
+  useEffect(() => {
+    const loadWalletData = async () => {
+      try {
+        // Simulate wallet data loading
+        const timer = setTimeout(() => {
+          setIsLoading(false);
+          if (escrowError) {
+            setWalletError(escrowError);
+          }
+        }, 1000);
+        return () => clearTimeout(timer);
+      } catch (error) {
+        console.error('Wallet data loading error:', error);
+        setWalletError('Failed to load wallet data');
+        setIsLoading(false);
+      }
+    };
+    
+    loadWalletData();
+  }, [escrowError]);
 
   const filteredTransactions = transactions.filter(transaction => {
-    const matchesFilter = filter === 'all' || transaction.type === filter;
-    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
+    try {
+      const matchesFilter = filter === 'all' || transaction.type === filter;
+      const matchesSearch = 
+        (transaction?.relatedListing?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (transaction?.reference || '').toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesFilter && matchesSearch;
+    } catch (error) {
+      console.error('Error filtering transactions:', error);
+      return true; // Show transaction if filtering fails
+    }
   });
 
   const handleWithdraw = () => {
-    const amount = parseFloat(withdrawAmount);
-    if (amount > 0 && amount <= currentBalance) {
-      const newTransaction: Transaction = {
-        id: Date.now().toString(),
-        type: 'withdrawal',
-        amount: -amount,
-        description: `Withdrawal to ${bankDetails.bankName} ****${bankDetails.accountNumber.slice(-4)}`,
-        date: new Date().toISOString(),
-        status: 'pending',
-        reference: `WTH_${Date.now().toString().slice(-6)}`
-      };
-      
-      setTransactions(prev => [newTransaction, ...prev]);
-      setWithdrawAmount('');
-      setShowWithdrawModal(false);
+    try {
+      const amount = parseFloat(withdrawAmount);
+      if (amount > 0 && amount <= currentBalance) {
+        const newTransaction: Transaction = {
+          id: Date.now().toString(),
+          type: 'withdrawal',
+          amount: -amount,
+          date: new Date().toISOString(),
+          status: 'pending',
+          reference: `WTH_${Date.now().toString().slice(-6)}`,
+          bankDetails: `${bankDetails.bankName} ****${bankDetails.accountNumber.slice(-4)}`
+        };
+        
+        setTransactions(prev => [newTransaction, ...prev]);
+        setWithdrawAmount('');
+        setShowWithdrawModal(false);
+      }
+    } catch (error) {
+      console.error('Error processing withdrawal:', error);
     }
   };
 
+  // Show error state
+  if (walletError && !isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">Wallet Error</h3>
+          <p className="text-gray-400 mb-4">{walletError}</p>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setWalletError(null);
+              setIsLoading(true);
+              window.location.reload();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Spinner size="lg" className="mb-4" />
+          <p className="text-gray-400">Loading your wallet...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Escrow Status Banner */}
+      {escrowData && escrowStatus === 'in_escrow' && (
+        <Card className="bg-yellow-500/10 border-yellow-500/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <ClockIcon className="w-6 h-6 text-yellow-400" />
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-400">Active Escrow Transaction</h3>
+                <p className="text-yellow-300">₦{escrowAmount.toLocaleString()} is currently held in escrow</p>
+              </div>
+            </div>
+            <EscrowStatusCard status={escrowStatus} />
+          </div>
+        </Card>
+      )}
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-white mb-2">Wallet</h1>
@@ -524,6 +680,29 @@ const Wallet: React.FC = () => {
           })}
         </div>
 
+        {/* Escrow Transaction Display */}
+        {escrowData && (
+          <div className="mb-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-white font-medium">Escrow Transaction</h4>
+              <EscrowStatusCard status={escrowStatus} size="sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-400">Account:</p>
+                <p className="text-white">{escrowData.accountId || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400">Amount:</p>
+                <p className="text-white font-semibold">₦{escrowAmount.toLocaleString()}</p>
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-gray-400 text-xs">Created: {escrowData.createdAt ? new Date(escrowData.createdAt).toLocaleDateString() : 'N/A'}</p>
+            </div>
+          </div>
+        )}
+
         {filteredTransactions.length === 0 && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -596,6 +775,15 @@ const Wallet: React.FC = () => {
         </div>
       )}
     </div>
+  );
+};
+
+// Main Wallet Component with Error Boundary
+const Wallet: React.FC = () => {
+  return (
+    <WalletErrorBoundary>
+      <WalletSection />
+    </WalletErrorBoundary>
   );
 };
 

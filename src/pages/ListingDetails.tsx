@@ -24,6 +24,8 @@ import Button from '../components/UI/Button';
 import Badge from '../components/UI/Badge';
 import Modal from '../components/UI/Modal';
 import { featuredListings } from '../data/mockData';
+import { useEscrow } from '../hooks/useEscrow';
+import { useToast } from '../components/UI/ToastProvider';
 
 interface ListingDetailsProps {
   listingId?: string;
@@ -36,6 +38,8 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
   const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { createEscrow, escrow } = useEscrow();
+  const { showSuccess, showError } = useToast();
 
   // Mock data - in real app, fetch from API
   const listing = featuredListings.find(l => l.id === listingId) || featuredListings[0];
@@ -58,6 +62,48 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
     if (!isLinked) return { color: 'text-gray-400', icon: Unlock, text: 'Not linked' };
     if (!isUnlinkable) return { color: 'text-red-400', icon: Lock, text: 'Permanently linked' };
     return { color: 'text-green-400', icon: Unlock, text: 'Can be unlinked' };
+  };
+
+  const handleBuyNow = () => {
+    try {
+      // Check if user is authenticated (in a real app, this would be from auth context)
+      const mockUser = JSON.parse(localStorage.getItem('mockUser') || '{}');
+      if (!mockUser.isAuthenticated) {
+        showError('Authentication Required', 'Please log in to purchase this account.');
+        onNavigate('auth');
+        return;
+      }
+
+      // Create escrow transaction
+      const escrowData = {
+        id: `ESCROW_${Date.now()}`,
+        buyerId: mockUser.id || 'BUYER_001',
+        sellerId: listing.seller.id,
+        accountId: listing.id,
+        accountTitle: listing.title,
+        amount: listing.price,
+        status: 'in_escrow' as const,
+        createdAt: Date.now()
+      };
+
+      createEscrow(escrowData);
+      
+      showSuccess(
+        'Payment Secured in Escrow',
+        `₦${listing.price.toLocaleString()} has been held securely. The seller will now provide account details.`
+      );
+      
+      setShowBuyModal(false);
+      
+      // In development mode, show additional info
+      if (import.meta.env.MODE === 'development') {
+        console.log('Escrow Transaction Created:', escrowData);
+      }
+      
+    } catch (error) {
+      console.error('Error creating escrow:', error);
+      showError('Purchase Failed', 'There was an error processing your purchase. Please try again.');
+    }
   };
 
   if (isLoading) {
@@ -290,14 +336,29 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                 </div>
 
                 {/* Buy Button */}
-                <Button
-                  size="lg"
-                  onClick={() => setShowBuyModal(true)}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
-                >
-                  <Shield className="mr-2 h-5 w-5" />
-                  Buy Now with Escrow
-                </Button>
+                {escrow && escrow.accountId === listing.id ? (
+                  <div className="w-full bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4 text-center">
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <Shield className="h-5 w-5 text-yellow-400" />
+                      <span className="text-yellow-400 font-semibold">Purchase In Progress</span>
+                    </div>
+                    <p className="text-yellow-300 text-sm">
+                      ₦{escrow.amount.toLocaleString()} is held in escrow
+                    </p>
+                    <p className="text-yellow-200 text-xs mt-1">
+                      Waiting for seller to provide account details
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    size="lg"
+                    onClick={() => setShowBuyModal(true)}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
+                  >
+                    <Shield className="mr-2 h-5 w-5" />
+                    Buy Now with Escrow
+                  </Button>
+                )}
 
                 {/* Trust Indicators */}
                 <div className="space-y-3 pt-4 border-t border-gray-700">
@@ -412,12 +473,18 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
             <p className="text-white font-semibold">${listing.price}</p>
             <p className="text-sm text-gray-400">Escrow Protected</p>
           </div>
-          <Button
-            onClick={() => setShowBuyModal(true)}
-            className="bg-green-600 hover:bg-green-700 px-8"
-          >
-            Buy Now
-          </Button>
+          {escrow && escrow.accountId === listing.id ? (
+            <div className="bg-yellow-500/20 border border-yellow-500/30 rounded px-4 py-2">
+              <p className="text-yellow-400 text-sm font-medium">In Escrow</p>
+            </div>
+          ) : (
+            <Button
+              onClick={() => setShowBuyModal(true)}
+              className="bg-green-600 hover:bg-green-700 px-8"
+            >
+              Buy Now
+            </Button>
+          )}
         </div>
       </div>
 
@@ -523,13 +590,21 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
             <Button
               size="lg"
               className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => onNavigate('auth')}
+              onClick={handleBuyNow}
             >
-              Continue to Payment
+              Confirm Purchase
             </Button>
             <p className="text-xs text-gray-400 text-center">
               By continuing, you agree to our Terms of Service and Escrow Policy
             </p>
+            {import.meta.env.MODE === 'development' && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                <p className="text-blue-400 text-xs font-medium mb-1">🧪 Development Mode</p>
+                <p className="text-blue-300 text-xs">
+                  This will create a simulated escrow transaction using localStorage
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </Modal>

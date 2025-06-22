@@ -335,12 +335,13 @@ const PendingOrdersModal: React.FC<PendingOrdersModalProps> = ({ isOpen, onClose
 
           {/* Orders List */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {orders.map((order) => {
+            {orders.filter(order => order && (order.id || order.orderId)).map((order, index) => {
               const statusConfig = getStatusConfig(order.escrowStatus);
+              const uniqueKey = order.id || order.orderId || `order-${index}`;
               
               return (
                 <motion.div
-                  key={order.id}
+                  key={uniqueKey}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-[#1E1E1E] border border-[#292929] rounded-xl p-6 hover:border-[#00FFB2]/30 transition-all duration-200"
@@ -549,8 +550,8 @@ const PendingOrdersModal: React.FC<PendingOrdersModalProps> = ({ isOpen, onClose
                         <div>
                           <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Linked Socials</p>
                           <div className="flex flex-wrap gap-2">
-                            {details.accountDetails.linkedSocials.map((social, index) => (
-                              <span key={index} className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full border border-blue-500/30">
+                            {details.accountDetails.linkedSocials.filter(social => social).map((social, index) => (
+                              <span key={`social-${social}-${index}`} className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full border border-blue-500/30">
                                 {social}
                               </span>
                             ))}
@@ -566,8 +567,8 @@ const PendingOrdersModal: React.FC<PendingOrdersModalProps> = ({ isOpen, onClose
                         <div>
                           <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Notable Skins</p>
                           <div className="space-y-1">
-                            {details.accountDetails.notableSkins.map((skin, index) => (
-                              <p key={index} className="text-sm text-gray-300">• {skin}</p>
+                            {details.accountDetails.notableSkins.filter(skin => skin).map((skin, index) => (
+                              <p key={`skin-${skin}-${index}`} className="text-sm text-gray-300">• {skin}</p>
                             ))}
                           </div>
                         </div>

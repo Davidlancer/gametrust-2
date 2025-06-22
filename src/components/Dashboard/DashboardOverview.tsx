@@ -8,12 +8,15 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   EyeIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import { TrendingUpIcon } from 'lucide-react';
 import { DashboardPage } from '../../types/dashboard';
+import { useEscrow } from '../../hooks/useEscrow';
+import EscrowStatusCard from '../UI/EscrowStatusCard';
 
 interface StatCardProps {
   title: string;
@@ -105,6 +108,22 @@ interface DashboardOverviewProps {
 
 const DashboardOverview: React.FC<DashboardOverviewProps> = ({ handlePageChange }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
+  
+  // Safe escrow data handling
+  let escrowData = null;
+  
+  try {
+    const { escrow } = useEscrow();
+    escrowData = escrow;
+  } catch (error) {
+    console.error('Error loading escrow data in DashboardOverview:', error);
+  }
+  
+  // Safe fallbacks
+  const escrowAmount = escrowData?.amount || 0;
+  const escrowStatus = escrowData?.status || 'none';
+  
+  console.log('DashboardOverview - Escrow Status:', escrowData);
 
   // Mock data for different time periods
   const performanceData = {
@@ -158,6 +177,45 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ handlePageChange 
         </div>
       </div>
 
+      {/* Escrow Funds Alert */}
+      {escrowData && escrowStatus === 'in_escrow' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4 lg:p-6 flex-shrink-0"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="flex-shrink-0">
+              <ShieldCheckIcon className="w-8 h-8 text-yellow-400" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-2">
+                <h3 className="text-lg font-semibold text-white">Escrow Funds Held</h3>
+                <EscrowStatusCard status={escrowStatus} />
+              </div>
+              <p className="text-yellow-300 font-medium mb-1">
+                ₦{escrowAmount.toLocaleString()} is currently held in escrow for this sale.
+              </p>
+              <p className="text-gray-300 text-sm">
+                Account: {escrowData.accountTitle || 'N/A'} • Transaction ID: {escrowData.id || 'N/A'}
+              </p>
+              <p className="text-yellow-200 text-sm mt-2">
+                💡 Funds will be released once the buyer confirms delivery
+              </p>
+            </div>
+          </div>
+          {import.meta.env.MODE === 'development' && (
+            <div className="mt-4 pt-4 border-t border-yellow-500/20">
+              <p className="text-yellow-400 text-xs font-medium mb-1">🧪 Development Mode</p>
+              <p className="text-yellow-300 text-xs">
+                This is a simulated escrow transaction using localStorage
+              </p>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 flex-shrink-0">
         <StatCard
@@ -186,10 +244,10 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ handlePageChange 
         />
         <StatCard
           title="Pending Orders"
-          value="5"
+          value={escrowData && escrowStatus === 'in_escrow' ? "6" : "5"}
           icon={ClockIcon}
           color="bg-yellow-500/20 text-yellow-400"
-          change="2 urgent"
+          change={escrowData && escrowStatus === 'in_escrow' ? "1 in escrow" : "2 urgent"}
           trend="neutral"
         />
       </div>

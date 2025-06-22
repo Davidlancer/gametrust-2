@@ -288,21 +288,22 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex space-x-3 mt-4 sm:mt-0">
+                  <div className="flex items-center space-x-3 mt-4 sm:mt-0">
                     <Button
                       variant={isFollowing ? "secondary" : "primary"}
+                      size="md"
                       onClick={() => setIsFollowing(!isFollowing)}
-                      className="flex items-center"
+                      className="flex items-center justify-center min-w-[140px] h-10"
                     >
                       {isFollowing ? (
                         <>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Following
+                          <CheckCircle className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span className="whitespace-nowrap">Following</span>
                         </>
                       ) : (
                         <>
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Follow Seller
+                          <UserPlus className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span className="whitespace-nowrap">Follow Seller</span>
                         </>
                       )}
                     </Button>
@@ -310,9 +311,10 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
                       variant="outline" 
                       size="md"
                       onClick={() => setIsChatOpen(true)}
+                      className="flex items-center justify-center min-w-[120px] h-10"
                     >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      Message
+                      <MessageCircle className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Message</span>
                     </Button>
                     <Button 
                       variant="ghost" 
@@ -328,8 +330,9 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
                         }
                         setShowReportModal(true);
                       }}
-                      className={hasReportedSeller ? 'opacity-50 cursor-not-allowed' : ''}
+                      className={`flex items-center justify-center w-10 h-10 ${hasReportedSeller ? 'opacity-50 cursor-not-allowed' : ''}`}
                       disabled={hasReportedSeller}
+                      title="Report Seller"
                     >
                       <Flag className="h-4 w-4" />
                     </Button>

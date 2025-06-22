@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   WalletIcon,
@@ -9,11 +9,17 @@ import {
   BanknotesIcon,
   ClockIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  ExclamationTriangleIcon,
+  MagnifyingGlassIcon,
+  CalendarIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
+import Spinner from '../UI/Spinner';
 import { useToast } from '../UI/ToastProvider';
 import { notificationService } from '../../services/notificationService';
+import { useEscrow } from '../../hooks/useEscrow';
+import EscrowStatusCard from '../UI/EscrowStatusCard';
 
 interface Transaction {
   id: string;
@@ -120,46 +126,252 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const BuyerWallet: React.FC = () => {
+// Error Boundary Component
+class BuyerWalletErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('BuyerWallet Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">Something went wrong</h3>
+            <p className="text-gray-400 mb-4">We're having trouble loading your wallet.</p>
+            <Button
+              variant="primary"
+              onClick={() => window.location.reload()}
+            >
+              Reload Page
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Main BuyerWallet Section Component
+const BuyerWalletSection: React.FC = () => {
   const [showFundModal, setShowFundModal] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [filter, setFilter] = useState('all');
-  const { showSuccess, showError } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [walletError, setWalletError] = useState<string | null>(null);
   
+  // Safe toast usage with fallback
+  let toastHandlers = { showSuccess: () => {}, showError: () => {} };
+  try {
+    const toast = useToast();
+    toastHandlers = toast;
+  } catch (toastError) {
+    console.warn('Toast provider not available, using fallback handlers');
+  }
+  const { showSuccess, showError } = toastHandlers;
+  
+  // Safe escrow hook usage with error handling
+  let escrowData = null;
+  let updateEscrowStatusFn = () => {};
+  let escrowError = null;
+  try {
+    const { escrow, updateEscrowStatus, error } = useEscrow();
+    escrowData = escrow;
+    updateEscrowStatusFn = updateEscrowStatus;
+    escrowError = error;
+  } catch (hookError) {
+    console.error('useEscrow hook error:', hookError);
+    escrowError = 'Failed to load escrow data';
+  }
+  
+  // Safe fallbacks for wallet data
   const currentBalance = 100000;
-  const pendingBalance = 70000; // Amount in escrow
+  const pendingBalance = escrowData?.amount || 70000; // Amount in escrow
+  const escrowAmount = escrowData?.amount || 0;
+  const escrowStatus = escrowData?.status || null;
   
+  // Debug logging
+  console.log('BuyerWallet Load:', { 
+    balance: currentBalance, 
+    pendingBalance, 
+    escrow: escrowData,
+    escrowError,
+    walletError 
+  });
+  
+  // Initialize component with loading state and error handling
+  useEffect(() => {
+    const loadWalletData = async () => {
+      try {
+        const timer = setTimeout(() => {
+          setIsLoading(false);
+          if (escrowError) {
+            setWalletError(escrowError);
+          }
+        }, 1000);
+        return () => clearTimeout(timer);
+      } catch (error) {
+        console.error('BuyerWallet data loading error:', error);
+        setWalletError('Failed to load wallet data');
+        setIsLoading(false);
+      }
+    };
+    
+    loadWalletData();
+  }, [escrowError]);
+
   const filteredTransactions = mockTransactions.filter(transaction => {
-    if (filter === 'all') return true;
-    return transaction.type === filter;
+    try {
+      const matchesFilter = filter === 'all' || transaction.type === filter;
+      const matchesSearch = (transaction?.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesFilter && matchesSearch;
+    } catch (error) {
+      console.error('Error filtering transactions:', error);
+      return true; // Show transaction if filtering fails
+    }
   });
 
   const handleFundWallet = () => {
-    if (!fundAmount || parseFloat(fundAmount) <= 0) {
-      showError('Invalid Amount', 'Please enter a valid amount to fund your wallet.');
-      return;
-    }
-    
-    const amount = parseFloat(fundAmount);
-    const methodName = paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 
-                      paymentMethod === 'card' ? 'Debit/Credit Card' : 'USSD';
-    
-    // Use notification service for both notification and toast
-    notificationService.walletFunded(
-      `₦${amount.toLocaleString()}`,
-      {
-        toastTitle: '💸 Wallet Funded',
-        toastMessage: `You just added ₦${amount.toLocaleString()} to your balance.`
+    try {
+      if (!fundAmount || parseFloat(fundAmount) <= 0) {
+        showError('Invalid Amount', 'Please enter a valid amount to fund your wallet.');
+        return;
       }
-    );
-    
-    setShowFundModal(false);
-    setFundAmount('');
+      
+      const amount = parseFloat(fundAmount);
+      const methodName = paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 
+                        paymentMethod === 'card' ? 'Debit/Credit Card' : 'USSD';
+      
+      // Use notification service for both notification and toast
+      notificationService.walletFunded(
+        `₦${amount.toLocaleString()}`,
+        {
+          toastTitle: '💸 Wallet Funded',
+          toastMessage: `You just added ₦${amount.toLocaleString()} to your balance.`
+        }
+      );
+      
+      setShowFundModal(false);
+      setFundAmount('');
+    } catch (error) {
+      console.error('Error funding wallet:', error);
+      showError('Error', 'Error funding wallet. Please try again.');
+    }
   };
+
+  // Show error state
+  if (walletError && !isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">Wallet Error</h3>
+          <p className="text-gray-400 mb-4">{walletError}</p>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setWalletError(null);
+              setIsLoading(true);
+              window.location.reload();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Spinner size="lg" className="mb-4" />
+          <p className="text-gray-400">Loading your wallet...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col space-y-6">
+      {/* Escrow Status Banner */}
+      {escrowData && escrowStatus === 'in_escrow' && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <ClockIcon className="w-6 h-6 text-yellow-400" />
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-400">Active Escrow Transaction</h3>
+                <p className="text-yellow-300">₦{escrowAmount.toLocaleString()} is currently held in escrow</p>
+              </div>
+            </div>
+            <EscrowStatusCard status={escrowStatus} />
+          </div>
+        </div>
+      )}
+
+      {/* Escrow Actions for Buyer */}
+      {escrowData && escrowStatus === 'in_escrow' && (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+          <h3 className="text-white font-semibold mb-3">Escrow Actions</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Once you receive your account details and verify everything is correct, you can release the payment to the seller.
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="primary"
+              onClick={() => {
+                try {
+                  updateEscrowStatusFn('released');
+                  showSuccess('Success', 'Payment released to seller successfully!');
+                } catch (error) {
+                  console.error('Error confirming delivery:', error);
+                  showError('Error', 'Failed to confirm delivery. Please try again.');
+                }
+              }}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircleIcon className="w-4 h-4 mr-2" />
+              Confirm Delivery
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                try {
+                  updateEscrowStatusFn('disputed');
+                  showError('Dispute Raised', 'Dispute raised. Our team will review this case.');
+                } catch (error) {
+                  console.error('Error raising dispute:', error);
+                  showError('Error', 'Failed to raise dispute. Please try again.');
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <ExclamationTriangleIcon className="w-4 h-4 mr-2" />
+              Raise Dispute
+            </Button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -242,12 +454,51 @@ const BuyerWallet: React.FC = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="relative">
+              <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Escrow Transaction Display */}
+          {escrowData && (
+            <div className="mb-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-white font-medium">Escrow Transaction</h4>
+                <EscrowStatusCard status={escrowStatus} size="sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-400">Account:</p>
+                  <p className="text-white">{escrowData.accountId || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Amount:</p>
+                  <p className="text-white font-semibold">₦{escrowAmount.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="mt-2">
+                <p className="text-gray-400 text-xs">Created: {escrowData.createdAt ? new Date(escrowData.createdAt).toLocaleDateString() : 'N/A'}</p>
+              </div>
+            </div>
+          )}
+
           {filteredTransactions.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <WalletIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-400 mb-2">No transactions found</h3>
-                <p className="text-gray-500">Your transaction history will appear here</p>
+                <p className="text-gray-500">
+                  {filter === 'all' ? 'Your transaction history will appear here' : `No ${filter} transactions found.`}
+                </p>
               </div>
             </div>
           ) : (
@@ -379,6 +630,15 @@ const BuyerWallet: React.FC = () => {
         </div>
       )}
     </div>
+  );
+};
+
+// Main BuyerWallet Component with Error Boundary
+const BuyerWallet: React.FC = () => {
+  return (
+    <BuyerWalletErrorBoundary>
+      <BuyerWalletSection />
+    </BuyerWalletErrorBoundary>
   );
 };
 

@@ -37,6 +37,19 @@ function App() {
   const [userType, setUserType] = useState<string>('buyer');
   const [devMode] = useState<boolean>(true); // Testing mode toggle
 
+  // Initialize mock user for escrow functionality
+  useEffect(() => {
+    const mockUser = {
+      id: 'USER_001',
+      isAuthenticated: true,
+      role: 'buyer',
+      name: 'Test User',
+      email: 'test@gametrust.com'
+    };
+    localStorage.setItem('mockUser', JSON.stringify(mockUser));
+    setIsAuthenticated(true);
+  }, []);
+
   const handleNavigate = (page: string, id?: string) => {
     // Parse URL with query parameters
     let targetPage = page;

@@ -8,11 +8,15 @@ import {
   EyeIcon,
   PlusIcon,
   GiftIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ShieldCheckIcon,
+  ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
 import { BuyerDashboardPage } from '../../types/dashboard';
 import { useToast } from '../UI/ToastProvider';
+import { useEscrow } from '../../hooks/useEscrow';
+import EscrowStatusCard from '../UI/EscrowStatusCard';
 
 interface StatCardProps {
   title: string;
@@ -140,7 +144,27 @@ interface BuyerDashboardOverviewProps {
 }
 
 const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handlePageChange, onNavigate }) => {
-  const { showSuccess, showInfo } = useToast();
+  const { showSuccess, showInfo, showError } = useToast();
+  
+  // Safe escrow data handling
+  let escrowData = null;
+  let updateEscrowStatusFn = null;
+  let clearEscrowFn = null;
+  
+  try {
+    const { escrow, updateEscrowStatus, clearEscrow } = useEscrow();
+    escrowData = escrow;
+    updateEscrowStatusFn = updateEscrowStatus;
+    clearEscrowFn = clearEscrow;
+  } catch (error) {
+    console.error('Error loading escrow data in BuyerDashboardOverview:', error);
+  }
+  
+  // Safe fallbacks
+  const escrowAmount = escrowData?.amount || 0;
+  const escrowStatus = escrowData?.status || 'none';
+  
+  console.log('BuyerDashboardOverview - Escrow Status:', escrowData);
 
   const handleMarketplaceClick = () => {
     showInfo('Marketplace', 'This would redirect to marketplace in a real app');
@@ -154,6 +178,36 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
   const handleReferralClick = () => {
     showInfo('Referral Program', 'Opening referral dashboard...');
     handlePageChange('referral');
+  };
+
+  const handleConfirmDelivery = () => {
+    try {
+      if (escrowData && updateEscrowStatusFn) {
+        updateEscrowStatusFn('released');
+        showSuccess(
+          'Payment Released',
+          `₦${escrowAmount.toLocaleString()} has been released to the seller. Thank you for your purchase!`
+        );
+      }
+    } catch (error) {
+      console.error('Error confirming delivery:', error);
+      showError('Error', 'Failed to confirm delivery. Please try again.');
+    }
+  };
+
+  const handleRaiseDispute = () => {
+    try {
+      if (escrowData && updateEscrowStatusFn) {
+        updateEscrowStatusFn('disputed');
+        showError(
+          'Dispute Raised',
+          'Your dispute has been submitted. Our support team will review it within 24 hours.'
+        );
+      }
+    } catch (error) {
+      console.error('Error raising dispute:', error);
+      showError('Error', 'Failed to raise dispute. Please try again.');
+    }
   };
   return (
     <div className="h-full flex flex-col space-y-4 lg:space-y-6 overflow-y-auto">
@@ -192,10 +246,10 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
         >
           <StatCard
             title="Active Escrows"
-            value={1}
+            value={escrow ? 1 : 0}
             icon={ShoppingBagIcon}
             color="bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500"
-            trend="Pending Confirmation"
+            trend={escrow ? "Pending Confirmation" : "No Active Escrows"}
           />
         </motion.div>
         
@@ -240,6 +294,64 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
           />
         </motion.div>
       </motion.div>
+
+      {/* Active Escrow Section */}
+      {escrowData && escrowStatus === 'in_escrow' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4 lg:p-6 flex-shrink-0"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-3">
+                <ShieldCheckIcon className="w-6 h-6 text-yellow-400" />
+                <h3 className="text-lg font-semibold text-white">Active Escrow Transaction</h3>
+                <EscrowStatusCard status={escrowStatus} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-white font-medium">{escrowData.accountTitle || 'N/A'}</p>
+                <p className="text-gray-300">Amount: ₦{escrowAmount.toLocaleString()}</p>
+                <p className="text-gray-400 text-sm">
+                  Transaction ID: {escrowData.id || 'N/A'}
+                </p>
+                <p className="text-yellow-300 text-sm">
+                  ⚠️ Please confirm delivery once you receive and verify the account details
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 lg:ml-6">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleConfirmDelivery}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircleIcon className="w-4 h-4 mr-2" />
+                Confirm Delivery
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRaiseDispute}
+                className="border-red-500 text-red-400 hover:bg-red-500/10 hover:border-red-400"
+              >
+                <ExclamationCircleIcon className="w-4 h-4 mr-2" />
+                Raise Dispute
+              </Button>
+            </div>
+          </div>
+          {import.meta.env.MODE === 'development' && (
+            <div className="mt-4 pt-4 border-t border-yellow-500/20">
+              <p className="text-yellow-400 text-xs font-medium mb-1">🧪 Development Mode</p>
+              <p className="text-yellow-300 text-xs">
+                This is a simulated escrow transaction using localStorage
+              </p>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 min-h-0">
         {/* Recent Activity */}
