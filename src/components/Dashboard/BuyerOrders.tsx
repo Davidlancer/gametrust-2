@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   MagnifyingGlassIcon,
@@ -7,10 +7,12 @@ import {
   ExclamationTriangleIcon,
   EyeIcon,
   ShieldCheckIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
 import { useToast } from '../UI/ToastProvider';
 import DisputeModal from '../UI/DisputeModal';
+import ChatModal from '../UI/ChatModal';
 
 interface Order {
   id: string;
@@ -129,7 +131,27 @@ const BuyerOrders: React.FC = () => {
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeOrder, setDisputeOrder] = useState<Order | null>(null);
   const [disputedOrders, setDisputedOrders] = useState<Set<string>>(new Set());
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [chatOrderId, setChatOrderId] = useState<string>('');
   const { showSuccess, showError, showWarning } = useToast();
+
+  const openChat = (orderId: string) => {
+    setChatOrderId(orderId);
+    setChatModalOpen(true);
+  };
+
+  // Listen for chat events from notifications
+  useEffect(() => {
+    const handleOpenOrderChat = (event: CustomEvent) => {
+      const { orderId } = event.detail;
+      openChat(orderId);
+    };
+
+    window.addEventListener('openOrderChat', handleOpenOrderChat as EventListener);
+    return () => {
+      window.removeEventListener('openOrderChat', handleOpenOrderChat as EventListener);
+    };
+  }, []);
 
   const filteredOrders = mockOrders.filter(order => {
     const matchesSearch = order.game.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -461,34 +483,46 @@ const BuyerOrders: React.FC = () => {
                 </div>
               )}
               
-              {selectedOrder.status === 'in_escrow' && selectedOrder.escrowStatus === 'delivered' && (
-                <div className="flex space-x-2 pt-4">
-                  <Button
-                    variant="primary"
-                    onClick={() => handleConfirmAccess(selectedOrder.id)}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    Confirm Access
-                  </Button>
-                  {disputedOrders.has(selectedOrder.id) ? (
+              {/* Action buttons for all orders */}
+              <div className="flex space-x-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => openChat(selectedOrder.id)}
+                  className="flex items-center gap-2 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                >
+                  <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                  Message Seller
+                </Button>
+                
+                {selectedOrder.status === 'in_escrow' && selectedOrder.escrowStatus === 'delivered' && (
+                  <>
                     <Button
-                      variant="outline"
-                      disabled
-                      className="flex-1 border-orange-500 text-orange-400 cursor-not-allowed"
+                      variant="primary"
+                      onClick={() => handleConfirmAccess(selectedOrder.id)}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
                     >
-                      In Dispute
+                      Confirm Access
                     </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleOpenDispute(selectedOrder.id)}
-                      className="flex-1 border-red-500 text-red-400 hover:bg-red-500/10"
-                    >
-                      Open Dispute
-                    </Button>
-                  )}
-                </div>
-              )}
+                    {disputedOrders.has(selectedOrder.id) ? (
+                      <Button
+                        variant="outline"
+                        disabled
+                        className="flex-1 border-orange-500 text-orange-400 cursor-not-allowed"
+                      >
+                        In Dispute
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleOpenDispute(selectedOrder.id)}
+                        className="flex-1 border-red-500 text-red-400 hover:bg-red-500/10"
+                      >
+                        Open Dispute
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </motion.div>
         </div>
@@ -500,6 +534,13 @@ const BuyerOrders: React.FC = () => {
         onClose={() => setShowDisputeModal(false)}
         order={disputeOrder}
         onDisputeSubmitted={handleDisputeSubmitted}
+      />
+
+      {/* Chat Modal */}
+      <ChatModal
+        isOpen={chatModalOpen}
+        onClose={() => setChatModalOpen(false)}
+        orderId={chatOrderId}
       />
     </div>
   );

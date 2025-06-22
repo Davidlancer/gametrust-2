@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 export interface Notification {
   id: string;
-  type: 'wallet' | 'referral' | 'escrow' | 'dispute' | 'order';
+  type: 'wallet' | 'referral' | 'escrow' | 'dispute' | 'order' | 'message';
   title: string;
   body: string;
   time: string;
@@ -19,17 +19,6 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [modalNotification, setModalNotification] = useState<Notification | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Load notifications from localStorage on mount
-  useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  // Update unread count when notifications change
-  useEffect(() => {
-    const unread = notifications.filter(n => !n.read).length;
-    setUnreadCount(unread);
-  }, [notifications]);
 
   const loadNotifications = useCallback(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -63,6 +52,39 @@ export const useNotifications = () => {
     return newNotification;
   }, [notifications, saveNotifications]);
 
+  // Load notifications from localStorage on mount
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  // Listen for new chat messages
+  useEffect(() => {
+    const handleNewChatMessage = (event: CustomEvent) => {
+      const { orderId, message, fromUser, userRole } = event.detail;
+      
+      // Add notification for new message
+      addNotification({
+        type: 'message',
+        title: `New Message from @${fromUser}`,
+        body: `You have a new message about Order #${orderId}`,
+        time: 'Just now',
+        ctaLabel: 'Open Chat',
+        ctaRoute: `/orders/${orderId}/chat`
+      });
+    };
+
+    window.addEventListener('newChatMessage', handleNewChatMessage as EventListener);
+    return () => {
+      window.removeEventListener('newChatMessage', handleNewChatMessage as EventListener);
+    };
+  }, [addNotification]);
+
+  // Update unread count when notifications change
+  useEffect(() => {
+    const unread = notifications.filter(n => !n.read).length;
+    setUnreadCount(unread);
+  }, [notifications]);
+
   const markAsRead = useCallback((notificationId: string) => {
     const updatedNotifications = notifications.map(n => 
       n.id === notificationId ? { ...n, read: true } : n
@@ -81,7 +103,7 @@ export const useNotifications = () => {
   }, []);
 
   const generateRandomNotification = useCallback(() => {
-    const types: Notification['type'][] = ['wallet', 'referral', 'escrow', 'dispute', 'order'];
+    const types: Notification['type'][] = ['wallet', 'referral', 'escrow', 'dispute', 'order', 'message'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     
     const templates = {
@@ -123,6 +145,14 @@ export const useNotifications = () => {
           'You bought \'PUBG Elite\' — Check your inbox for details.',
           'New order received for \'Fortnite V-Bucks\'.',
           'Your order #GTX9999 status has been updated.'
+        ]
+      },
+      message: {
+        titles: ['New Message from @SellerX', 'New Message from @BuyerY', 'Chat Message'],
+        bodies: [
+          'You have a new message about Order #GTX1234',
+          'New message: "Thanks for the quick delivery!"',
+          'You received a message about your recent order.'
         ]
       }
     };

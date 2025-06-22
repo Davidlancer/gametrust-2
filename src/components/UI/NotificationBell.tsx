@@ -73,6 +73,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
       case 'escrow': return '🛡️';
       case 'dispute': return '⚠️';
       case 'order': return '🛍️';
+      case 'message': return '💬';
       default: return '🔔';
     }
   };
@@ -234,6 +235,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
         onClose={closeNotificationModal}
         onCTAClick={(route) => {
           if (onNavigate) {
+            // Handle chat routes
+            if (route.includes('/chat')) {
+              const orderId = route.split('/')[2]; // Extract order ID from /orders/GTX1234/chat
+              const event = new CustomEvent('openOrderChat', { detail: { orderId } });
+              window.dispatchEvent(event);
+              return;
+            }
+            
             // Map notification routes to dashboard pages
             const routeMapping: { [key: string]: string } = {
               '/wallet': 'buyer-dashboard',

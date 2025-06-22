@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
+  XMarkIcon,
   ClockIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -10,11 +11,15 @@ import {
   DocumentArrowUpIcon,
   FlagIcon,
   CalendarIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
+import ChatModal from '../UI/ChatModal';
+import { useToast } from '../UI/ToastProvider';
 
 interface Order {
   id: string;
@@ -166,6 +171,14 @@ const Orders: React.FC = () => {
   const [orders, setOrders] = useState(mockOrders);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [chatOrderId, setChatOrderId] = useState<string>('');
+  const { showSuccess, showError, showWarning } = useToast();
+
+  const openChat = (orderId: string) => {
+    setChatOrderId(orderId);
+    setChatModalOpen(true);
+  };
 
   const filteredOrders = orders.filter(order => {
     const matchesFilter = filter === 'all' || order.status === filter;
@@ -191,58 +204,89 @@ const Orders: React.FC = () => {
   };
 
   const getActionButtons = (order: Order) => {
+    const buttons = [];
+    
+    // Add Contact Buyer button for all orders
+    buttons.push(
+      <Button
+        key="contact"
+        variant="outline"
+        size="sm"
+        onClick={() => openChat(order.id)}
+        className="flex items-center gap-2"
+      >
+        <ChatBubbleLeftRightIcon className="w-4 h-4" />
+        Contact Buyer
+      </Button>
+    );
+    
+    // Add status-specific buttons
     switch (order.status) {
       case 'in_escrow':
-        return (
-          <div className="flex items-center space-x-2">
-            {!order.hasCredentials ? (
-              <Button 
-                size="sm" 
-                variant="primary"
-                onClick={() => handleUploadCredentials(order.id)}
-                className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white"
-              >
-                <DocumentArrowUpIcon className="w-4 h-4 mr-1" />
-                Upload Credentials
-              </Button>
-            ) : (
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => handleMarkDelivered(order.id)}
-                className="border-green-500/30 text-green-400 hover:bg-green-500/10"
-              >
-                <CheckCircleIcon className="w-4 h-4 mr-1" />
-                Mark as Delivered
-              </Button>
-            )}
-            <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300">
-              <FlagIcon className="w-4 h-4" />
+        if (!order.hasCredentials) {
+          buttons.push(
+            <Button 
+              key="upload"
+              size="sm" 
+              variant="primary"
+              onClick={() => handleUploadCredentials(order.id)}
+              className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white"
+            >
+              <DocumentArrowUpIcon className="w-4 h-4 mr-1" />
+              Upload Credentials
             </Button>
-          </div>
+          );
+        } else {
+          buttons.push(
+            <Button 
+              key="delivered"
+              size="sm" 
+              variant="outline"
+              onClick={() => handleMarkDelivered(order.id)}
+              className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+            >
+              <CheckCircleIcon className="w-4 h-4 mr-1" />
+              Mark as Delivered
+            </Button>
+          );
+        }
+        buttons.push(
+          <Button key="flag" size="sm" variant="ghost" className="text-red-400 hover:text-red-300">
+            <FlagIcon className="w-4 h-4" />
+          </Button>
         );
+        break;
       case 'delivered':
-        return (
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-400">Waiting for buyer confirmation</span>
-            <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300">
-              <FlagIcon className="w-4 h-4" />
-            </Button>
-          </div>
+        buttons.push(
+          <span key="waiting" className="text-sm text-gray-400">Waiting for buyer confirmation</span>
         );
+        buttons.push(
+          <Button key="flag" size="sm" variant="ghost" className="text-red-400 hover:text-red-300">
+            <FlagIcon className="w-4 h-4" />
+          </Button>
+        );
+        break;
       case 'disputed':
-        return (
-          <Button size="sm" variant="outline" className="border-red-500/30 text-red-400">
+        buttons.push(
+          <Button key="dispute" size="sm" variant="outline" className="border-red-500/30 text-red-400">
             View Dispute
           </Button>
         );
+        break;
       default:
-        return (
-          <Button size="sm" variant="ghost">
+        buttons.push(
+          <Button key="view" size="sm" variant="ghost">
             <EyeIcon className="w-4 h-4" />
           </Button>
         );
+        break;
     }
+    
+    return (
+      <div className="flex items-center space-x-2">
+        {buttons}
+      </div>
+    );
   };
 
   return (
@@ -439,6 +483,13 @@ const Orders: React.FC = () => {
           </div>
         </Card>
       )}
+
+      {/* Chat Modal */}
+      <ChatModal
+        isOpen={chatModalOpen}
+        onClose={() => setChatModalOpen(false)}
+        orderId={chatOrderId}
+      />
     </div>
   );
 };
