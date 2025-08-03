@@ -12,14 +12,17 @@ import SellerDashboard from './pages/SellerDashboard';
 import BuyerDashboard from './pages/BuyerDashboard';
 import Onboarding from './pages/Onboarding';
 import ReferralProgram from './pages/ReferralProgram';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminLogin from './pages/AdminLogin';
 import { AlertTriangle } from 'lucide-react';
 import ToastProvider from './components/UI/ToastProvider';
 import RoleSwitcher from './components/UI/RoleSwitcher';
 import NotificationDevTools, { DevModeToggle } from './components/UI/NotificationDevTools';
 import NotificationServiceProvider from './components/UI/NotificationServiceProvider';
+import { ActivityLogProvider } from './context/ActivityLogContext';
 import './utils/testRoleSwitcher'; // Load test utilities
 
-type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'seller-dashboard' | 'buyer-dashboard' | 'onboarding' | 'referral-program';
+type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'seller-dashboard' | 'buyer-dashboard' | 'onboarding' | 'referral-program' | 'admin-dashboard' | 'admin-login';
 
 interface OnboardingData {
   roles: string[];
@@ -32,9 +35,9 @@ function App() {
   const [selectedListingId, setSelectedListingId] = useState<string>('1');
   const [selectedSellerId, setSelectedSellerId] = useState<string>('1');
   const [userOnboarded, setUserOnboarded] = useState<boolean>(false);
-  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
+  const [, setOnboardingData] = useState<OnboardingData | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [userType, setUserType] = useState<string>('buyer');
+  const [, setUserType] = useState<string>('buyer');
   const [devMode] = useState<boolean>(true); // Testing mode toggle
 
   // Initialize mock user for escrow functionality
@@ -206,6 +209,21 @@ function App() {
         return <Onboarding onComplete={handleOnboardingComplete} onNavigate={handleNavigate} />;
       case 'referral-program':
         return <ReferralProgram />;
+      case 'admin-dashboard': {
+        // Check if user is authenticated as admin
+        const currentUser = localStorage.getItem('current_user');
+        if (currentUser) {
+          const user = JSON.parse(currentUser);
+          if (user.role === 'admin') {
+            return <AdminDashboard onNavigate={handleNavigate} />;
+          }
+        }
+        // Redirect to admin login if not authenticated as admin
+        setCurrentPage('admin-login');
+        return <AdminLogin onNavigate={handleNavigate} />;
+      }
+      case 'admin-login':
+        return <AdminLogin onNavigate={handleNavigate} />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }
@@ -219,8 +237,17 @@ function App() {
     }
   }, [isAuthenticated, currentPage]);
 
-  // Show onboarding for authenticated users who haven't completed it
-  const shouldShowOnboarding = isAuthenticated && !userOnboarded && currentPage !== 'auth' && currentPage !== 'onboarding';
+  // Show onboarding for authenticated users who haven't completed it (except admins)
+  const isAdmin = () => {
+    const currentUser = localStorage.getItem('current_user');
+    if (currentUser) {
+      const user = JSON.parse(currentUser);
+      return user.role === 'admin';
+    }
+    return false;
+  };
+  
+  const shouldShowOnboarding = isAuthenticated && !userOnboarded && currentPage !== 'auth' && currentPage !== 'onboarding' && !isAdmin();
 
   if (shouldShowOnboarding) {
     return (
@@ -231,8 +258,9 @@ function App() {
   }
 
   return (
-    <ToastProvider>
-      <NotificationServiceProvider>
+    <ActivityLogProvider>
+      <ToastProvider>
+        <NotificationServiceProvider>
         <div className="min-h-screen bg-gray-900">
           {/* Testing Mode Banner */}
           {devMode && (
@@ -245,7 +273,7 @@ function App() {
           )}
           
           <div className={devMode ? 'pt-10' : ''}>
-            {currentPage !== 'onboarding' && (
+            {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
               <Navbar 
                 currentPage={currentPage} 
                 onNavigate={handleNavigate} 
@@ -253,10 +281,10 @@ function App() {
                 onLogout={handleLogout}
               />
             )}
-            <main>
+            <main className={currentPage === 'admin-dashboard' || currentPage === 'admin-login' ? '' : 'pt-16'}>
               {renderPage()}
             </main>
-            {isAuthenticated && currentPage !== 'onboarding' && (
+            {isAuthenticated && currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
               <RoleSwitcher 
                 onNavigate={handleNavigate}
                 onLogout={handleLogout}
@@ -264,15 +292,16 @@ function App() {
                 mobileOnly={true}
               />
             )}
-            {currentPage !== 'onboarding' && <Footer />}
+            {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && <Footer />}
           </div>
           
           {/* Notification Dev Tools */}
           <NotificationDevTools />
           <DevModeToggle />
         </div>
-      </NotificationServiceProvider>
-    </ToastProvider>
+        </NotificationServiceProvider>
+      </ToastProvider>
+    </ActivityLogProvider>
   );
  }
 

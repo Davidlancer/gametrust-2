@@ -16,10 +16,14 @@ const MOCK_CREDENTIALS = {
   seller: {
     email: 'test@gametrust.gg',
     password: 'password123'
+  },
+  admin: {
+    email: 'admin@gametrust.com',
+    password: 'admin123'
   }
 };
 
-const DEV_MODE = true; // Toggle for testing mode
+// const DEV_MODE = true; // Toggle for testing mode - currently unused
 
 const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -69,38 +73,55 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
       // Mock sign in - check test credentials
       const isBuyer = formData.email === MOCK_CREDENTIALS.buyer.email && formData.password === MOCK_CREDENTIALS.buyer.password;
       const isSeller = formData.email === MOCK_CREDENTIALS.seller.email && formData.password === MOCK_CREDENTIALS.seller.password;
+      const isAdmin = formData.email === MOCK_CREDENTIALS.admin.email && formData.password === MOCK_CREDENTIALS.admin.password;
       
-      if (isBuyer || isSeller) {
-        const userType = isBuyer ? 'buyer' : 'seller';
-        
-        // Store mock user data
-        localStorage.setItem('mockUser', JSON.stringify({
-          email: formData.email,
-          username: isBuyer ? 'BuyerUser' : 'TestUser',
-          userType,
-          isAuthenticated: true,
-          loginTime: new Date().toISOString()
-        }));
-        
-        // Store mock login flag
-        localStorage.setItem('mockLogin', 'true');
-        
-        setIsLoading(false);
-        
-        // Check if user has completed onboarding
-        const onboarded = localStorage.getItem('onboardingComplete');
-        if (onboarded === 'true') {
-          // Route based on user type
-          if (isBuyer) {
-            onNavigate('buyer-dashboard');
-          } else {
-            onNavigate('seller-dashboard');
-          }
+      if (isBuyer || isSeller || isAdmin) {
+        if (isAdmin) {
+          // Store admin user data
+          const fakeAdmin = {
+            id: "ADMIN001",
+            username: "admin",
+            role: "admin",
+            name: "Admin User",
+            email: "admin@gametrust.com",
+            isAuthenticated: true
+          };
+          localStorage.setItem('current_user', JSON.stringify(fakeAdmin));
+          
+          setIsLoading(false);
+          onNavigate('admin-dashboard');
         } else {
-          onNavigate('onboarding');
+          const userType = isBuyer ? 'buyer' : 'seller';
+          
+          // Store mock user data
+          localStorage.setItem('mockUser', JSON.stringify({
+            email: formData.email,
+            username: isBuyer ? 'BuyerUser' : 'TestUser',
+            userType,
+            isAuthenticated: true,
+            loginTime: new Date().toISOString()
+          }));
+          
+          // Store mock login flag
+          localStorage.setItem('mockLogin', 'true');
+          
+          setIsLoading(false);
+          
+          // Check if user has completed onboarding
+          const onboarded = localStorage.getItem('onboardingComplete');
+          if (onboarded === 'true') {
+            // Route based on user type
+            if (isBuyer) {
+              onNavigate('buyer-dashboard');
+            } else {
+              onNavigate('seller-dashboard');
+            }
+          } else {
+            onNavigate('onboarding');
+          }
         }
       } else {
-        setError('Invalid credentials. Use buyer@gametrust.gg / password123 or test@gametrust.gg / password123');
+        setError('Invalid credentials. Use buyer@gametrust.gg / password123, test@gametrust.gg / password123, or admin@gametrust.com / admin123');
         setIsLoading(false);
       }
     }

@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* CSS Reset for Admin Dashboard */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Ensure no unwanted spacing on admin pages */
+.admin-layout {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
