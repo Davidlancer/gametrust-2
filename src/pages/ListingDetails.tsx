@@ -3,26 +3,25 @@ import {
   ArrowLeft, 
   Star, 
   Shield, 
-  Play, 
   ChevronLeft, 
   ChevronRight, 
   ExternalLink,
   Flag,
   CheckCircle,
-  AlertTriangle,
   Lock,
   Unlock,
   Eye,
-  Calendar,
   User,
   GamepadIcon,
   Crown,
-  Zap
+  Zap,
+  MessageCircle
 } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Badge from '../components/UI/Badge';
 import Modal from '../components/UI/Modal';
+import ChatPopup from '../components/UI/ChatPopup';
 import { featuredListings } from '../data/mockData';
 import { useEscrow } from '../hooks/useEscrow';
 import { useToast } from '../components/UI/ToastProvider';
@@ -37,8 +36,9 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
   const [showImageModal, setShowImageModal] = useState(false);
   const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showChatPopup, setShowChatPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { createEscrow, escrow } = useEscrow();
+  const { createEscrowTransaction, escrow } = useEscrow();
   const { showSuccess, showError } = useToast();
 
   // Mock data - in real app, fetch from API
@@ -76,17 +76,14 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
 
       // Create escrow transaction
       const escrowData = {
-        id: `ESCROW_${Date.now()}`,
         buyerId: mockUser.id || 'BUYER_001',
         sellerId: listing.seller.id,
         accountId: listing.id,
-        accountTitle: listing.title,
-        amount: listing.price,
-        status: 'in_escrow' as const,
-        createdAt: Date.now()
+        listingTitle: listing.title,
+        amount: listing.price
       };
 
-      createEscrow(escrowData);
+      createEscrowTransaction(escrowData);
       
       showSuccess(
         'Payment Secured in Escrow',
@@ -103,6 +100,25 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
     } catch (error) {
       console.error('Error creating escrow:', error);
       showError('Purchase Failed', 'There was an error processing your purchase. Please try again.');
+    }
+  };
+
+  const handleChatWithSeller = () => {
+    try {
+      // Check if user is authenticated
+      const mockUser = JSON.parse(localStorage.getItem('mockUser') || '{}');
+      if (!mockUser.isAuthenticated) {
+        showError('Authentication Required', 'Please log in to chat with the seller.');
+        onNavigate('auth');
+        return;
+      }
+
+      // Open chat popup
+      setShowChatPopup(true);
+      
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      showError('Chat Failed', 'There was an error opening the chat. Please try again.');
     }
   };
 
@@ -335,7 +351,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                   <div className="text-sm text-gray-400">One-time payment</div>
                 </div>
 
-                {/* Buy Button */}
+                {/* Action Buttons */}
                 {escrow && escrow.accountId === listing.id ? (
                   <div className="w-full bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4 text-center">
                     <div className="flex items-center justify-center space-x-2 mb-2">
@@ -350,14 +366,27 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                     </p>
                   </div>
                 ) : (
-                  <Button
-                    size="lg"
-                    onClick={() => setShowBuyModal(true)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
-                  >
-                    <Shield className="mr-2 h-5 w-5" />
-                    Buy Now with Escrow
-                  </Button>
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      size="lg"
+                      onClick={() => setShowBuyModal(true)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
+                    >
+                      <Shield className="mr-2 h-5 w-5" />
+                      Buy with Escrow
+                    </Button>
+                    <Button
+                      size="lg"
+                      onClick={handleChatWithSeller}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-purple-500/25"
+                    >
+                      <MessageCircle className="mr-2 h-5 w-5" />
+                      Chat with Seller
+                    </Button>
+                    <p className="text-xs text-gray-400 text-center mt-1">
+                      Ask questions before buying. Seller typically replies within 24 hours.
+                    </p>
+                  </div>
                 )}
 
                 {/* Trust Indicators */}
@@ -468,24 +497,40 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
 
       {/* Mobile Sticky CTA */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gray-800/95 backdrop-blur-sm border-t border-gray-700 p-4 z-40">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white font-semibold">${listing.price}</p>
-            <p className="text-sm text-gray-400">Escrow Protected</p>
-          </div>
-          {escrow && escrow.accountId === listing.id ? (
+        {escrow && escrow.accountId === listing.id ? (
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold">${listing.price}</p>
+              <p className="text-sm text-gray-400">Escrow Protected</p>
+            </div>
             <div className="bg-yellow-500/20 border border-yellow-500/30 rounded px-4 py-2">
               <p className="text-yellow-400 text-sm font-medium">In Escrow</p>
             </div>
-          ) : (
-            <Button
-              onClick={() => setShowBuyModal(true)}
-              className="bg-green-600 hover:bg-green-700 px-8"
-            >
-              Buy Now
-            </Button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="text-center">
+              <p className="text-white font-semibold">${listing.price}</p>
+              <p className="text-sm text-gray-400">Escrow Protected</p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setShowBuyModal(true)}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-sm"
+              >
+                <Shield className="mr-1 h-4 w-4" />
+                Buy Now
+              </Button>
+              <Button
+                onClick={handleChatWithSeller}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-sm"
+              >
+                <MessageCircle className="mr-1 h-4 w-4" />
+                Chat
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Image Modal */}
@@ -608,6 +653,24 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
           </div>
         </div>
       </Modal>
+
+      {/* Chat Popup */}
+      <ChatPopup
+        isOpen={showChatPopup}
+        onClose={() => setShowChatPopup(false)}
+        seller={{
+          id: listing.seller.id,
+          username: listing.seller.username,
+          avatar: listing.seller.avatar,
+          isOnline: true, // Default to online for demo
+          lastSeen: '2 hours ago' // Default last seen time
+        }}
+        onSendMessage={(message) => {
+          console.log('Message sent:', message);
+          // Here you would typically send the message to your backend
+          // For now, we'll just log it
+        }}
+      />
     </div>
   );
 };
