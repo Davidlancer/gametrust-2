@@ -22,6 +22,10 @@ import PlatformMarketplace from './pages/Platform/Marketplace';
 import StartSelling from './pages/Platform/StartSelling';
 import HowItWorks from './pages/Platform/HowItWorks';
 import Verification from './pages/Platform/Verification';
+import Faq from './pages/Faq';
+import Pricing from './pages/Pricing';
+import BuyerProtection from './pages/BuyerProtection';
+import Community from './pages/Community';
 import { AlertTriangle } from 'lucide-react';
 import ToastProvider from './components/UI/ToastProvider';
 import RoleSwitcher from './components/UI/RoleSwitcher';
@@ -34,7 +38,7 @@ import LoadingScreen from './components/UI/LoadingScreen';
 import { LoadingProvider } from './context/LoadingContext';
 import './utils/testRoleSwitcher'; // Load test utilities
 
-type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'seller-dashboard' | 'buyer-dashboard' | 'onboarding' | 'referral-program' | 'admin-dashboard' | 'admin-login' | 'support/help-center' | 'support/safety-guidelines' | 'support/contact-us' | 'support/terms-of-service' | 'platform/marketplace' | 'platform/start-selling' | 'platform/how-it-works' | 'platform/verification';
+type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'seller-dashboard' | 'buyer-dashboard' | 'onboarding' | 'referral-program' | 'admin-dashboard' | 'admin-login' | 'support/help-center' | 'support/safety-guidelines' | 'support/contact-us' | 'support/terms-of-service' | 'platform/marketplace' | 'platform/start-selling' | 'platform/how-it-works' | 'platform/verification' | 'faq' | 'pricing' | 'buyer-protection' | 'community';
 
 interface OnboardingData {
   roles: string[];
@@ -281,6 +285,14 @@ function App() {
         return <HowItWorks onNavigate={handleNavigate} />;
       case 'platform/verification':
         return <Verification onNavigate={handleNavigate} />;
+      case 'faq':
+        return <Faq onNavigate={handleNavigate} />;
+      case 'pricing':
+        return <Pricing onNavigate={handleNavigate} />;
+      case 'buyer-protection':
+        return <BuyerProtection onNavigate={handleNavigate} />;
+      case 'community':
+        return <Community onNavigate={handleNavigate} />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }
@@ -288,7 +300,7 @@ function App() {
 
   // Redirect to auth if not authenticated (except for public pages)
   useEffect(() => {
-    const publicPages = ['home', 'marketplace', 'platforms', 'auth', 'support/help-center', 'support/safety-guidelines', 'support/contact-us', 'support/terms-of-service', 'platform/marketplace', 'platform/start-selling', 'platform/how-it-works', 'platform/verification'];
+    const publicPages = ['home', 'marketplace', 'platforms', 'auth', 'support/help-center', 'support/safety-guidelines', 'support/contact-us', 'support/terms-of-service', 'platform/marketplace', 'platform/start-selling', 'platform/how-it-works', 'platform/verification', 'faq', 'pricing', 'buyer-protection', 'community'];
     if (!isAuthenticated && !publicPages.includes(currentPage)) {
       setCurrentPage('auth');
     }

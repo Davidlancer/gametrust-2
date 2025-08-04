@@ -149,7 +149,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <ul className="space-y-3">
               <li>
                 <button 
-                  onClick={() => onNavigate?.('support/faq')}
+                  onClick={() => onNavigate?.('faq')}
                   className="text-gray-400 hover:text-white hover:underline transition-all duration-200 text-sm text-left block w-full"
                 >
                   FAQs
@@ -157,7 +157,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button 
-                  onClick={() => onNavigate?.('platform/pricing')}
+                  onClick={() => onNavigate?.('pricing')}
                   className="text-gray-400 hover:text-white hover:underline transition-all duration-200 text-sm text-left block w-full"
                 >
                   Pricing
@@ -165,7 +165,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button 
-                  onClick={() => onNavigate?.('platform/buyer-protection')}
+                  onClick={() => onNavigate?.('buyer-protection')}
                   className="text-gray-400 hover:text-white hover:underline transition-all duration-200 text-sm text-left block w-full"
                 >
                   Buyer Protection
@@ -173,7 +173,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button 
-                  onClick={() => onNavigate?.('community/blog')}
+                  onClick={() => onNavigate?.('community')}
                   className="text-gray-400 hover:text-white hover:underline transition-all duration-200 text-sm text-left block w-full"
                 >
                   Community
