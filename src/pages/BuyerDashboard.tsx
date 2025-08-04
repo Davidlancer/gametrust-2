@@ -133,7 +133,7 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-indigo-900 text-white overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-gray-900 text-white overflow-hidden flex flex-col">
       {/* Testing Mode Banner */}
       <TestingBanner />
       
@@ -168,7 +168,7 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden bg-gray-900/50 backdrop-blur-sm">
+        <main className="flex-1 overflow-hidden bg-gray-900">
           <div className="h-full p-4 lg:p-6 xl:p-8">
             <motion.div
               key={currentPage}

@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from '../UI/Button';
-import { ArrowRight, Shield, TrendingUp } from 'lucide-react';
+import { ArrowRight, Shield } from 'lucide-react';
 
 interface HeroProps {
   onNavigate: (page: string) => void;
@@ -41,8 +41,8 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             Protected by escrow, verified by experts, trusted by the community.
           </p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+          {/* CTA Button */}
+          <div className="flex justify-center items-center mb-16">
             <Button 
               size="lg" 
               onClick={() => onNavigate('marketplace')}
@@ -50,14 +50,6 @@ const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             >
               Explore Marketplace
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button 
-              size="lg" 
-              onClick={() => onNavigate('sell')}
-              className="group hover:bg-purple-600 hover:shadow-lg transition-all duration-300"
-            >
-              Start Selling
-              <TrendingUp className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
 
