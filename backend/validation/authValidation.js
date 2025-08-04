@@ -5,17 +5,14 @@ const Joi = require('joi');
  */
 const registerValidation = (data) => {
   const schema = Joi.object({
-    username: Joi.string()
-      .alphanum()
-      .min(3)
-      .max(30)
-      .pattern(/^[a-zA-Z0-9_]+$/)
+    name: Joi.string()
+      .min(2)
+      .max(50)
       .required()
       .messages({
-        'string.pattern.base': 'Username can only contain letters, numbers, and underscores',
-        'string.min': 'Username must be at least 3 characters long',
-        'string.max': 'Username cannot exceed 30 characters',
-        'any.required': 'Username is required'
+        'string.min': 'Name must be at least 2 characters long',
+        'string.max': 'Name cannot exceed 50 characters',
+        'any.required': 'Name is required'
       }),
     
     email: Joi.string()

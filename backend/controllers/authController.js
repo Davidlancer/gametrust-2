@@ -18,32 +18,24 @@ const register = async (req, res) => {
       });
     }
 
-    const { username, email, password } = req.body;
+    const { name, email, password } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.findOne({
-      $or: [
-        { email: email.toLowerCase() },
-        { username: username }
-      ]
-    });
+    const existingUser = await User.existsByEmail(email);
 
     if (existingUser) {
-      const field = existingUser.email === email.toLowerCase() ? 'email' : 'username';
       return res.status(400).json({
         success: false,
-        message: `User with this ${field} already exists`
+        message: 'User with this email already exists'
       });
     }
 
     // Create new user
-    const user = new User({
-      username,
-      email: email.toLowerCase(),
+    const user = await User.create({
+      name,
+      email,
       password
     });
-
-    await user.save();
 
     // Generate tokens
     const tokens = generateTokenPair(user);
@@ -100,8 +92,8 @@ const login = async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Find user by email or username and include password for comparison
-    const user = await User.findByEmailOrUsername(email).select('+password');
+    // Find user by email and include password for comparison
+    const user = await User.findByEmail(email);
 
     if (!user) {
       return res.status(401).json({
@@ -111,7 +103,7 @@ const login = async (req, res) => {
     }
 
     // Check password
-    const isPasswordValid = await user.comparePassword(password);
+    const isPasswordValid = await User.comparePassword(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -122,27 +114,16 @@ const login = async (req, res) => {
     // Generate tokens
     const tokens = generateTokenPair(user);
 
-    // Save refresh token to user
-    user.refreshToken = tokens.refreshToken;
-    await user.save({ validateBeforeSave: false });
-
-    // Update last login
-    await user.updateLastLogin();
-
     res.status(200).json({
       success: true,
       message: 'Login successful',
       data: {
         user: {
-          id: user._id,
-          username: user.username,
+          id: user.id,
+          name: user.name,
           email: user.email,
-          avatar: user.avatar,
-          rating: user.rating,
-          totalSales: user.totalSales,
-          isVerified: user.isVerified,
-          role: user.role,
-          lastLogin: user.lastLogin
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
         },
         ...tokens
       }
@@ -168,110 +149,19 @@ const getMe = async (req, res) => {
       success: true,
       data: {
         user: {
-          id: user._id,
-          username: user.username,
+          id: user.id,
+          name: user.name,
           email: user.email,
-          avatar: user.avatar,
-          rating: user.rating,
-          totalSales: user.totalSales,
-          socials: user.socials,
-          isVerified: user.isVerified,
-          role: user.role,
-          lastLogin: user.lastLogin,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt
         }
       }
     });
   } catch (error) {
-    console.error('Get me error:', error);
+    console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error fetching user profile'
-    });
-  }
-};
-
-/**
- * Refresh access token
- * POST /api/auth/refresh
- */
-const refreshToken = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(401).json({
-        success: false,
-        message: 'Refresh token is required'
-      });
-    }
-
-    try {
-      // Verify refresh token
-      const decoded = verifyToken(refreshToken);
-      
-      // Find user with this refresh token
-      const user = await User.findOne({
-        _id: decoded.id,
-        refreshToken: refreshToken
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid refresh token'
-        });
-      }
-
-      // Generate new tokens
-      const tokens = generateTokenPair(user);
-
-      // Update refresh token in database
-      user.refreshToken = tokens.refreshToken;
-      await user.save({ validateBeforeSave: false });
-
-      res.status(200).json({
-        success: true,
-        message: 'Token refreshed successfully',
-        data: tokens
-      });
-    } catch (jwtError) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired refresh token'
-      });
-    }
-  } catch (error) {
-    console.error('Refresh token error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during token refresh'
-    });
-  }
-};
-
-/**
- * Logout user
- * POST /api/auth/logout
- */
-const logout = async (req, res) => {
-  try {
-    const user = req.user;
-
-    // Clear refresh token from database
-    user.refreshToken = null;
-    await user.save({ validateBeforeSave: false });
-
-    res.status(200).json({
-      success: true,
-      message: 'Logout successful'
-    });
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during logout'
+      message: 'Server error while fetching profile'
     });
   }
 };
@@ -279,7 +169,5 @@ const logout = async (req, res) => {
 module.exports = {
   register,
   login,
-  getMe,
-  refreshToken,
-  logout
+  getMe
 };

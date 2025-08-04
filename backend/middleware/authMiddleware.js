@@ -27,7 +27,7 @@ const protect = async (req, res, next) => {
       const decoded = verifyToken(token);
       
       // Get user from database (excluding password)
-      const user = await User.findById(decoded.id).select('-password -refreshToken');
+      const user = await User.findById(decoded.id);
       
       if (!user) {
         return res.status(401).json({

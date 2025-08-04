@@ -45,9 +45,9 @@ const verifyToken = (token) => {
  */
 const generateTokenPair = (user) => {
   const payload = {
-    id: user._id,
-    role: user.role,
-    username: user.username
+    id: user.id,
+    name: user.name,
+    email: user.email
   };
 
   const accessToken = generateAccessToken(payload);

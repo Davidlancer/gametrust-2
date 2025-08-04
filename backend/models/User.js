@@ -1,135 +1,109 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcrypt');
 
-const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: [true, 'Username is required'],
-    unique: true,
-    trim: true,
-    minlength: [3, 'Username must be at least 3 characters long'],
-    maxlength: [30, 'Username cannot exceed 30 characters'],
-    match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
-  },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
-  },
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters long'],
-    select: false // Don't include password in queries by default
-  },
-  avatar: {
-    type: String,
-    default: null
-  },
-  rating: {
-    type: Number,
-    default: 0,
-    min: [0, 'Rating cannot be negative'],
-    max: [5, 'Rating cannot exceed 5']
-  },
-  totalSales: {
-    type: Number,
-    default: 0,
-    min: [0, 'Total sales cannot be negative']
-  },
-  socials: {
-    facebook: {
-      type: String,
-      default: null
-    },
-    discord: {
-      type: String,
-      default: null
-    },
-    twitter: {
-      type: String,
-      default: null
-    }
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  lastLogin: {
-    type: Date,
-    default: null
-  },
-  refreshToken: {
-    type: String,
-    select: false
+const prisma = new PrismaClient();
+
+class User {
+  /**
+   * Create a new user
+   * @param {Object} userData - User data (name, email, password)
+   * @returns {Promise<Object>} Created user
+   */
+  static async create(userData) {
+    const { name, email, password } = userData;
+    
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    
+    return await prisma.user.create({
+      data: {
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
   }
-}, {
-  timestamps: true,
-  toJSON: { 
-    transform: function(doc, ret) {
-      delete ret.password;
-      delete ret.refreshToken;
-      delete ret.__v;
-      return ret;
-    }
+
+  /**
+   * Find user by email
+   * @param {String} email - User email
+   * @returns {Promise<Object|null>} User or null
+   */
+  static async findByEmail(email) {
+    return await prisma.user.findUnique({
+      where: {
+        email: email.toLowerCase()
+      }
+    });
   }
-});
 
-// Index for better query performance
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified (or is new)
-  if (!this.isModified('password')) return next();
-  
-  try {
-    // Hash password with cost of 12
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+  /**
+   * Find user by ID
+   * @param {String} id - User ID
+   * @returns {Promise<Object|null>} User or null
+   */
+  static async findById(id) {
+    return await prisma.user.findUnique({
+      where: {
+        id
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
   }
-});
 
-// Instance method to check password
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    throw new Error('Password comparison failed');
+  /**
+   * Find user by ID including password (for authentication)
+   * @param {String} id - User ID
+   * @returns {Promise<Object|null>} User with password or null
+   */
+  static async findByIdWithPassword(id) {
+    return await prisma.user.findUnique({
+      where: {
+        id
+      }
+    });
   }
-};
 
-// Instance method to update last login
-userSchema.methods.updateLastLogin = function() {
-  this.lastLogin = new Date();
-  return this.save({ validateBeforeSave: false });
-};
+  /**
+   * Compare password
+   * @param {String} candidatePassword - Password to compare
+   * @param {String} hashedPassword - Hashed password from database
+   * @returns {Promise<Boolean>} Password match result
+   */
+  static async comparePassword(candidatePassword, hashedPassword) {
+    return await bcrypt.compare(candidatePassword, hashedPassword);
+  }
 
-// Static method to find user by email or username
-userSchema.statics.findByEmailOrUsername = function(identifier) {
-  return this.findOne({
-    $or: [
-      { email: identifier.toLowerCase() },
-      { username: identifier }
-    ]
-  });
-};
+  /**
+   * Check if user exists by email
+   * @param {String} email - User email
+   * @returns {Promise<Boolean>} User exists
+   */
+  static async existsByEmail(email) {
+    const user = await prisma.user.findUnique({
+      where: {
+        email: email.toLowerCase()
+      },
+      select: {
+        id: true
+      }
+    });
+    return !!user;
+  }
+}
 
-// Virtual for user's full profile URL (for future use)
-userSchema.virtual('profileUrl').get(function() {
-  return `/profile/${this.username}`;
-});
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

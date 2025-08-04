@@ -1,224 +1,165 @@
 # GameTrust Authentication Backend
 
-A secure authentication system for the GameTrust gaming account marketplace built with Node.js, Express.js, MongoDB, and JWT.
+Express.js authentication system using JWT and Prisma ORM.
 
-## 🚀 Features
+## Features
 
-- **Secure Authentication**: JWT-based authentication with access and refresh tokens
-- **User Management**: Complete user registration, login, and profile management
-- **Role-Based Access**: Support for user and admin roles
-- **Security**: Password hashing with bcrypt, rate limiting, input validation
-- **MongoDB Integration**: Mongoose ODM with optimized schemas and indexes
-- **Production Ready**: Error handling, logging, and security middleware
+- User registration with password hashing (bcrypt)
+- User login with JWT token generation
+- Protected routes with JWT middleware
+- Prisma ORM with PostgreSQL database
+- Input validation with Joi
+- Security middleware (helmet, cors, rate limiting)
 
-## 📦 Installation
+## Setup
 
-1. **Clone and navigate to backend directory**
-```bash
-cd backend
-```
-
-2. **Install dependencies**
+1. Install dependencies:
 ```bash
 npm install
 ```
 
-3. **Environment Setup**
+2. Set up environment variables:
 ```bash
 cp .env.example .env
 ```
 
-4. **Configure environment variables in `.env`**
-```env
-NODE_ENV=development
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/gametrust
+3. Update the `.env` file with your database URL:
+```
+DATABASE_URL="postgresql://username:password@localhost:5432/gametrust?schema=public"
 JWT_SECRET=your-super-secret-jwt-key-here-make-it-long-and-random
-JWT_EXPIRE=15m
-JWT_REFRESH_EXPIRE=7d
 ```
 
-5. **Start the server**
+4. Run database migrations:
 ```bash
-# Development
+npx prisma db push
+```
+
+5. Generate Prisma client:
+```bash
+npx prisma generate
+```
+
+6. Start the server:
+```bash
 npm run dev
-
-# Production
-npm start
 ```
 
-## 🛠️ API Endpoints
+## API Endpoints
 
-### Authentication Routes
+### Public Routes
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/auth/register` | Register new user | No |
-| POST | `/api/auth/login` | Login user | No |
-| GET | `/api/auth/me` | Get current user | Yes |
-| POST | `/api/auth/refresh` | Refresh access token | No |
-| POST | `/api/auth/logout` | Logout user | Yes |
+#### POST /api/auth/register
+Register a new user.
 
-### Health Check
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | API health status |
-
-## 📝 API Usage Examples
-
-### Register User
-```bash
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "gamer123",
-    "email": "gamer@example.com",
-    "password": "SecurePass123",
-    "confirmPassword": "SecurePass123"
-  }'
-```
-
-### Login User
-```bash
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "gamer@example.com",
-    "password": "SecurePass123"
-  }'
-```
-
-### Get Current User (Protected)
-```bash
-curl -X GET http://localhost:5000/api/auth/me \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### Refresh Token
-```bash
-curl -X POST http://localhost:5000/api/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{
-    "refreshToken": "YOUR_REFRESH_TOKEN"
-  }'
-```
-
-## 🗄️ Database Schema
-
-### User Model
-```javascript
+**Request Body:**
+```json
 {
-  username: String (unique, required),
-  email: String (unique, required),
-  password: String (hashed, required),
-  avatar: String (optional),
-  rating: Number (default: 0),
-  totalSales: Number (default: 0),
-  socials: {
-    facebook: String,
-    discord: String,
-    twitter: String
-  },
-  isVerified: Boolean (default: false),
-  role: String (enum: ['user', 'admin'], default: 'user'),
-  lastLogin: Date,
-  refreshToken: String (hashed),
-  createdAt: Date,
-  updatedAt: Date
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "Password123",
+  "confirmPassword": "Password123"
 }
 ```
 
-## 🔒 Security Features
-
-- **Password Hashing**: bcrypt with salt rounds of 12
-- **JWT Security**: Signed tokens with issuer/audience validation
-- **Rate Limiting**: 100 requests per 15 minutes (5 for auth routes)
-- **Input Validation**: Joi validation for all inputs
-- **CORS Protection**: Configurable origins
-- **Helmet**: Security headers
-- **Error Handling**: Secure error responses
-
-## 🏗️ Project Structure
-
-```
-backend/
-├── controllers/
-│   └── authController.js      # Authentication logic
-├── middleware/
-│   └── authMiddleware.js      # JWT verification middleware
-├── models/
-│   └── User.js               # User schema and methods
-├── routes/
-│   └── auth.js               # Authentication routes
-├── utils/
-│   └── generateToken.js      # JWT token utilities
-├── validation/
-│   └── authValidation.js     # Input validation schemas
-├── .env.example              # Environment variables template
-├── server.js                 # Express server setup
-└── package.json              # Dependencies and scripts
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": "clx...",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+  }
+}
 ```
 
-## 🔧 Environment Variables
+#### POST /api/auth/login
+Login with email and password.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment mode | development |
-| `PORT` | Server port | 5000 |
-| `MONGODB_URI` | MongoDB connection string | mongodb://localhost:27017/gametrust |
-| `JWT_SECRET` | JWT signing secret | Required |
-| `JWT_EXPIRE` | Access token expiration | 15m |
-| `JWT_REFRESH_EXPIRE` | Refresh token expiration | 7d |
-
-## 🚀 Deployment
-
-### Production Checklist
-- [ ] Set strong `JWT_SECRET`
-- [ ] Configure production MongoDB URI
-- [ ] Set `NODE_ENV=production`
-- [ ] Configure CORS origins
-- [ ] Set up SSL/HTTPS
-- [ ] Configure reverse proxy (nginx)
-- [ ] Set up monitoring and logging
-
-### Docker Support (Optional)
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 5000
-CMD ["npm", "start"]
+**Request Body:**
+```json
+{
+  "email": "john@example.com",
+  "password": "Password123"
+}
 ```
 
-## 🧪 Testing
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": "clx...",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+  }
+}
+```
 
-Test the API endpoints using the provided curl examples or tools like Postman.
+### Protected Routes
 
-### Quick Test Sequence
-1. Register a new user
-2. Login with credentials
-3. Access protected route with token
-4. Refresh the token
-5. Logout
+#### GET /api/auth/me
+Get current user profile (requires JWT token).
 
-## 🔮 Future Enhancements
+**Headers:**
+```
+Authorization: Bearer <your-jwt-token>
+```
 
-- [ ] Email verification system
-- [ ] Password reset functionality
-- [ ] Social login (Google, Discord)
-- [ ] Two-factor authentication
-- [ ] User profile image upload
-- [ ] Admin user management endpoints
-- [ ] Audit logging
-- [ ] API documentation with Swagger
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "clx...",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  }
+}
+```
 
-## 📞 Support
+## Database Schema
 
-For issues or questions, please contact the GameBox Arena development team.
+The User model includes:
+- `id`: Unique identifier (CUID)
+- `name`: User's full name
+- `email`: Unique email address
+- `password`: Hashed password (bcrypt)
+- `createdAt`: Account creation timestamp
+- `updatedAt`: Last update timestamp
 
----
+## Security Features
 
-**GameTrust Authentication Backend** - Secure, scalable, and production-ready authentication for gaming marketplaces.
+- Password hashing with bcrypt (12 salt rounds)
+- JWT tokens with configurable expiration
+- Rate limiting on authentication routes
+- CORS protection
+- Helmet security headers
+- Input validation with Joi
+
+## Environment Variables
+
+- `NODE_ENV`: Environment (development/production)
+- `PORT`: Server port (default: 5000)
+- `DATABASE_URL`: PostgreSQL connection string
+- `JWT_SECRET`: Secret key for JWT signing
+- `JWT_EXPIRE`: Access token expiration (default: 15m)
+- `JWT_REFRESH_EXPIRE`: Refresh token expiration (default: 7d)
