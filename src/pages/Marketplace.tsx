@@ -69,9 +69,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
           {/* Active Filter Badge */}
           {filters.game && (
             <div className="mt-4">
-              <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                Filtered by: {filters.game}
-              </Badge>
+              <Badge type="linked" className="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                  Filtered by: {filters.game}
+                </Badge>
             </div>
           )}
         </div>

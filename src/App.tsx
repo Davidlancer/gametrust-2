@@ -316,49 +316,56 @@ function App() {
 
   return (
     <LoadingProvider>
-      <ActivityLogProvider>
-        <ToastProvider>
-          <NotificationServiceProvider>
-          <div className="min-h-screen bg-gray-900">
-          {/* Testing Mode Banner */}
-          {devMode && (
-            <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-600 text-black px-4 py-2">
-              <div className="flex items-center justify-center space-x-2 text-sm font-medium">
-                <AlertTriangle className="h-4 w-4" />
-                <span>🧪 Testing Mode Active - Frontend Only Demo</span>
+    <ActivityLogProvider>
+      <ToastProvider>
+        <NotificationServiceProvider>
+        <div className="min-h-screen bg-gray-900 text-white">
+          {isInitialLoading ? (
+            <LoadingScreen message="Initializing GameTrust..." />
+          ) : (
+            <>
+              <LoadingScreen />
+              {/* Testing Mode Banner */}
+              {devMode && (
+                <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-600 text-black px-4 py-2">
+                  <div className="flex items-center justify-center space-x-2 text-sm font-medium">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>🧪 Testing Mode Active - Frontend Only Demo</span>
+                  </div>
+                </div>
+              )}
+              
+              <div className={devMode ? 'pt-10' : ''}>
+                {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
+                  <Navbar 
+                    currentPage={currentPage} 
+                    onNavigate={handleNavigate} 
+                    isAuthenticated={isAuthenticated}
+                    onLogout={handleLogout}
+                  />
+                )}
+                <LoadingBar isLoading={isLoading} />
+                <main className={currentPage === 'admin-dashboard' || currentPage === 'admin-login' ? '' : 'pt-16'}>
+                  <PageTransition pageKey={currentPage}>
+                    {renderPage()}
+                  </PageTransition>
+                </main>
+                {isAuthenticated && currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
+                  <RoleSwitcher 
+                    onNavigate={handleNavigate}
+                    onLogout={handleLogout}
+                    currentPage={currentPage}
+                    mobileOnly={true}
+                  />
+                )}
+                {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && <Footer onNavigate={handleNavigate} />}
               </div>
-            </div>
+              
+              {/* Notification Dev Tools */}
+              <NotificationDevTools />
+              <DevModeToggle />
+            </>
           )}
-          
-          <div className={devMode ? 'pt-10' : ''}>
-            {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
-              <Navbar 
-                currentPage={currentPage} 
-                onNavigate={handleNavigate} 
-                isAuthenticated={isAuthenticated}
-                onLogout={handleLogout}
-              />
-            )}
-            <LoadingBar isLoading={isLoading} />
-            <main className={currentPage === 'admin-dashboard' || currentPage === 'admin-login' ? '' : 'pt-16'}>
-              <PageTransition pageKey={currentPage}>
-                {renderPage()}
-              </PageTransition>
-            </main>
-            {isAuthenticated && currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
-              <RoleSwitcher 
-                onNavigate={handleNavigate}
-                onLogout={handleLogout}
-                currentPage={currentPage}
-                mobileOnly={true}
-              />
-            )}
-            {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && <Footer onNavigate={handleNavigate} />}
-          </div>
-          
-          {/* Notification Dev Tools */}
-          <NotificationDevTools />
-          <DevModeToggle />
         </div>
         </NotificationServiceProvider>
       </ToastProvider>
