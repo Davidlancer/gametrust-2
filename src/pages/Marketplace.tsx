@@ -3,6 +3,8 @@ import { Search, Filter, Grid, List, Star } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Badge from '../components/UI/Badge';
 import Button from '../components/UI/Button';
+import ComponentTransition from '../components/UI/ComponentTransition';
+import { useLoading } from '../context/LoadingContext';
 import { featuredListings, games } from '../data/mockData';
 import { FilterOptions } from '../types';
 
@@ -11,6 +13,7 @@ interface MarketplaceProps {
 }
 
 const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
+  const { withLoading } = useLoading();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('newest');
@@ -30,15 +33,28 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
     }
   }, []);
 
+  // Search handler with loading animation
+  const handleSearch = async (term: string) => {
+    await withLoading(
+      () => new Promise(resolve => {
+        // Simulate API call delay
+        setTimeout(() => {
+          setSearchTerm(term);
+          resolve(true);
+        }, 800);
+      }),
+      'Searching listings...'
+    );
+  };
+
   const filteredListings = featuredListings.filter(listing => {
     const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          listing.game.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGame = !filters.game || listing.game === filters.game;
-    const matchesPlatform = !filters.platform || listing.platform === filters.platform;
     const matchesVerified = filters.verified === undefined || listing.isVerified === filters.verified;
     const matchesEscrow = filters.escrow === undefined || listing.hasEscrow === filters.escrow;
 
-    return matchesSearch && matchesGame && matchesPlatform && matchesVerified && matchesEscrow;
+    return matchesSearch && matchesGame && matchesVerified && matchesEscrow;
   });
 
   return (
@@ -70,7 +86,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
                 type="text"
                 placeholder="Search accounts, games, or sellers..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
@@ -159,11 +175,12 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
         </div>
 
         {/* Listings Grid/List */}
-        <div className={viewMode === 'grid' 
-          ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-          : 'space-y-4'
-        }>
-          {filteredListings.map((listing) => (
+        <ComponentTransition show={true} type="fade" key={viewMode}>
+          <div className={viewMode === 'grid' 
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+            : 'space-y-4'
+          }>
+            {filteredListings.map((listing) => (
             <Card key={listing.id} hover>
               <div className={viewMode === 'list' ? 'flex space-x-6' : ''}>
                 {/* Image */}
@@ -234,7 +251,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        </ComponentTransition>
 
         {filteredListings.length === 0 && (
           <div className="text-center py-12">

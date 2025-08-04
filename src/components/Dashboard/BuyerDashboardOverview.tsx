@@ -21,7 +21,7 @@ import EscrowStatusCard from '../UI/EscrowStatusCard';
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: string;
   trend?: string;
 }
@@ -143,22 +143,9 @@ interface BuyerDashboardOverviewProps {
   onNavigate?: (page: string) => void;
 }
 
-const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handlePageChange, onNavigate }) => {
+const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handlePageChange }) => {
   const { showSuccess, showInfo, showError } = useToast();
-  
-  // Safe escrow data handling
-  let escrowData = null;
-  let updateEscrowStatusFn = null;
-  let clearEscrowFn = null;
-  
-  try {
-    const { escrow, updateEscrowStatus, clearEscrow } = useEscrow();
-    escrowData = escrow;
-    updateEscrowStatusFn = updateEscrowStatus;
-    clearEscrowFn = clearEscrow;
-  } catch (error) {
-    console.error('Error loading escrow data in BuyerDashboardOverview:', error);
-  }
+  const { escrow: escrowData, updateEscrowStatus } = useEscrow();
   
   // Safe fallbacks
   const escrowAmount = escrowData?.amount || 0;
@@ -182,8 +169,8 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
 
   const handleConfirmDelivery = () => {
     try {
-      if (escrowData && updateEscrowStatusFn) {
-        updateEscrowStatusFn('released');
+      if (escrowData && updateEscrowStatus) {
+        updateEscrowStatus('released');
         showSuccess(
           'Payment Released',
           `₦${escrowAmount.toLocaleString()} has been released to the seller. Thank you for your purchase!`
@@ -197,8 +184,8 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
 
   const handleRaiseDispute = () => {
     try {
-      if (escrowData && updateEscrowStatusFn) {
-        updateEscrowStatusFn('disputed');
+      if (escrowData && updateEscrowStatus) {
+        updateEscrowStatus('disputed');
         showError(
           'Dispute Raised',
           'Your dispute has been submitted. Our support team will review it within 24 hours.'
@@ -246,10 +233,10 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
         >
           <StatCard
             title="Active Escrows"
-            value={escrow ? 1 : 0}
+            value={escrowData ? 1 : 0}
             icon={ShoppingBagIcon}
             color="bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500"
-            trend={escrow ? "Pending Confirmation" : "No Active Escrows"}
+            trend={escrowData ? "Pending Confirmation" : "No Active Escrows"}
           />
         </motion.div>
         
@@ -311,7 +298,7 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
                 <EscrowStatusCard status={escrowStatus} />
               </div>
               <div className="space-y-2">
-                <p className="text-white font-medium">{escrowData.accountTitle || 'N/A'}</p>
+                <p className="text-white font-medium">{escrowData.listingTitle || 'N/A'}</p>
                 <p className="text-gray-300">Amount: ₦{escrowAmount.toLocaleString()}</p>
                 <p className="text-gray-400 text-sm">
                   Transaction ID: {escrowData.id || 'N/A'}
