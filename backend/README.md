@@ -1,17 +1,45 @@
-# GameTrust Authentication Backend
+# GameTrust Auth Backend - TypeScript
 
-Express.js authentication system using JWT and Prisma ORM.
+A modern, modular authentication backend built with TypeScript, Express, and Prisma.
 
-## Features
+## 🚀 Features
 
-- User registration with password hashing (bcrypt)
-- User login with JWT token generation
-- Protected routes with JWT middleware
-- Prisma ORM with PostgreSQL database
-- Input validation with Joi
-- Security middleware (helmet, cors, rate limiting)
+- **TypeScript**: Full type safety and modern JavaScript features
+- **Modular Architecture**: Clean separation of concerns with module-based structure
+- **JWT Authentication**: Secure token-based authentication with refresh tokens
+- **Input Validation**: Comprehensive request validation using Joi
+- **Rate Limiting**: Protection against brute force attacks
+- **Security**: Helmet, CORS, and other security best practices
+- **Database**: Prisma ORM with PostgreSQL/MySQL support
 
-## Setup
+## 📁 Project Structure
+
+```
+src/
+├── config/                 # Configuration management
+│   └── index.ts           # App configuration
+├── modules/               # Feature modules
+│   └── auth/              # Authentication module
+│       ├── controllers/   # Route handlers
+│       │   └── auth.controller.ts
+│       ├── middleware/    # Auth-specific middleware
+│       │   ├── auth.middleware.ts
+│       │   └── validation.middleware.ts
+│       ├── models/        # Data models
+│       │   └── auth.model.ts
+│       ├── routes/        # Route definitions
+│       │   └── auth.routes.ts
+│       ├── utils/         # Auth utilities
+│       │   └── auth.utils.ts
+│       ├── validation/    # Input validation schemas
+│       │   └── auth.validation.ts
+│       └── index.ts       # Module exports
+├── types/                 # TypeScript type definitions
+│   └── index.ts
+└── server.ts              # Main application entry point
+```
+
+## 🛠️ Installation
 
 1. Install dependencies:
 ```bash
@@ -23,143 +51,136 @@ npm install
 cp .env.example .env
 ```
 
-3. Update the `.env` file with your database URL:
-```
-DATABASE_URL="postgresql://username:password@localhost:5432/gametrust?schema=public"
-JWT_SECRET=your-super-secret-jwt-key-here-make-it-long-and-random
-```
-
-4. Run database migrations:
-```bash
-npx prisma db push
+3. Configure your database connection in `.env`:
+```env
+DATABASE_URL="your-database-url"
+JWT_SECRET="your-jwt-secret"
+JWT_EXPIRE="15m"
+JWT_REFRESH_EXPIRE="7d"
+NODE_ENV="development"
 ```
 
-5. Generate Prisma client:
+4. Generate Prisma client:
 ```bash
 npx prisma generate
 ```
 
-6. Start the server:
+5. Run database migrations:
+```bash
+npx prisma db push
+```
+
+## 🚀 Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server with ts-node
+- `npm run dev:watch` - Start development server with file watching
+- `npm run build` - Compile TypeScript to JavaScript
+- `npm run start` - Start production server
+- `npm run clean` - Remove compiled files
+
+### Development Server
+
 ```bash
 npm run dev
 ```
 
-## API Endpoints
+The server will start on `http://localhost:5000` (or your configured PORT).
 
-### Public Routes
+## 📚 API Endpoints
 
-#### POST /api/auth/register
-Register a new user.
+### Authentication
 
-**Request Body:**
-```json
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "Password123",
-  "confirmPassword": "Password123"
-}
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - Login user
+- `GET /api/auth/me` - Get current user profile (protected)
+
+### Health Check
+
+- `GET /api/health` - API health status
+
+## 🏗️ Architecture
+
+### Modular Design
+
+The application follows a modular architecture where each feature (like authentication) is contained within its own module. This provides:
+
+- **Separation of Concerns**: Each module handles its own logic
+- **Scalability**: Easy to add new modules
+- **Maintainability**: Clear code organization
+- **Reusability**: Modules can be easily reused or extracted
+
+### File Naming Convention
+
+The project uses descriptive file naming:
+
+- `*.controller.ts` - Route handlers and business logic
+- `*.middleware.ts` - Express middleware functions
+- `*.model.ts` - Data models and database operations
+- `*.routes.ts` - Route definitions
+- `*.utils.ts` - Utility functions
+- `*.validation.ts` - Input validation schemas
+
+### TypeScript Benefits
+
+- **Type Safety**: Catch errors at compile time
+- **IntelliSense**: Better IDE support and autocomplete
+- **Refactoring**: Safer code refactoring
+- **Documentation**: Types serve as documentation
+- **Modern Features**: Latest JavaScript features with backward compatibility
+
+## 🔒 Security Features
+
+- **Helmet**: Security headers
+- **CORS**: Cross-origin resource sharing configuration
+- **Rate Limiting**: Prevent brute force attacks
+- **JWT**: Secure token-based authentication
+- **Password Hashing**: bcrypt with salt rounds
+- **Input Validation**: Joi schema validation
+- **SQL Injection Protection**: Prisma ORM prevents SQL injection
+
+## 🧪 Testing
+
+To run tests (when implemented):
+
+```bash
+npm test
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "user": {
-      "id": "clx...",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z"
-    },
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
-  }
-}
+## 📦 Production Build
+
+1. Build the application:
+```bash
+npm run build
 ```
 
-#### POST /api/auth/login
-Login with email and password.
-
-**Request Body:**
-```json
-{
-  "email": "john@example.com",
-  "password": "Password123"
-}
+2. Start production server:
+```bash
+npm start
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "user": {
-      "id": "clx...",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z"
-    },
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
-  }
-}
-```
+## 🔧 Configuration
 
-### Protected Routes
+The application uses a centralized configuration system in `src/config/index.ts`. All environment variables are validated and typed.
 
-#### GET /api/auth/me
-Get current user profile (requires JWT token).
+## 📝 Migration from JavaScript
 
-**Headers:**
-```
-Authorization: Bearer <your-jwt-token>
-```
+This backend has been migrated from JavaScript to TypeScript with the following improvements:
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "clx...",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z"
-    }
-  }
-}
-```
+1. **Full Type Safety**: All functions, variables, and API responses are typed
+2. **Modular Architecture**: Code organized into feature-based modules
+3. **Better Error Handling**: Typed error responses and proper error handling
+4. **Modern Development**: Latest TypeScript features and best practices
+5. **Improved Maintainability**: Clear code structure and documentation
 
-## Database Schema
+## 🤝 Contributing
 
-The User model includes:
-- `id`: Unique identifier (CUID)
-- `name`: User's full name
-- `email`: Unique email address
-- `password`: Hashed password (bcrypt)
-- `createdAt`: Account creation timestamp
-- `updatedAt`: Last update timestamp
+1. Follow the existing code structure and naming conventions
+2. Add proper TypeScript types for all new code
+3. Update tests when adding new features
+4. Follow the modular architecture pattern
 
-## Security Features
+## 📄 License
 
-- Password hashing with bcrypt (12 salt rounds)
-- JWT tokens with configurable expiration
-- Rate limiting on authentication routes
-- CORS protection
-- Helmet security headers
-- Input validation with Joi
-
-## Environment Variables
-
-- `NODE_ENV`: Environment (development/production)
-- `PORT`: Server port (default: 5000)
-- `DATABASE_URL`: PostgreSQL connection string
-- `JWT_SECRET`: Secret key for JWT signing
-- `JWT_EXPIRE`: Access token expiration (default: 15m)
-- `JWT_REFRESH_EXPIRE`: Refresh token expiration (default: 7d)
+MIT License - see LICENSE file for details.
