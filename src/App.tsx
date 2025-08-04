@@ -182,6 +182,11 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
   // Check authentication and onboarding status on app load
   useEffect(() => {
     // Simulate initial app loading with authentication check
@@ -319,7 +324,7 @@ function App() {
     <ActivityLogProvider>
       <ToastProvider>
         <NotificationServiceProvider>
-        <div className="min-h-screen bg-gray-900 text-white">
+        <div className="min-h-screen bg-gray-900 text-white overflow-x-hidden">
           {isInitialLoading ? (
             <LoadingScreen message="Initializing GameTrust..." />
           ) : (
@@ -335,7 +340,7 @@ function App() {
                 </div>
               )}
               
-              <div className={devMode ? 'pt-10' : ''}>
+              <div className={`${devMode ? 'pt-10' : ''} w-full overflow-x-hidden`}>
                 {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
                   <Navbar 
                     currentPage={currentPage} 

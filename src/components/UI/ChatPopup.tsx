@@ -569,22 +569,26 @@ const ChatPopup: React.FC<ChatPopupProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed bottom-4 right-4 w-96 h-[600px] bg-gradient-to-br from-gray-800/95 via-gray-900/95 to-black/95 backdrop-blur-xl border border-gray-600/50 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden lg:w-96 lg:h-[600px] max-lg:inset-4 max-lg:w-auto max-lg:h-auto max-lg:bottom-0 max-lg:right-0 max-lg:left-0 max-lg:top-0 max-lg:rounded-none"
+        className="fixed bg-gradient-to-br from-gray-800/95 via-gray-900/95 to-black/95 backdrop-blur-xl border border-gray-600/50 shadow-2xl z-50 flex flex-col overflow-hidden
+          lg:bottom-4 lg:right-4 lg:w-96 lg:h-[600px] lg:rounded-2xl
+          max-lg:inset-2 max-lg:rounded-xl
+          sm:max-lg:inset-4
+          max-sm:inset-1 max-sm:rounded-lg"
       >
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-4 flex items-center justify-between overflow-hidden">
+        <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-3 sm:p-4 flex items-center justify-between overflow-hidden flex-shrink-0">
           {/* Animated background glow */}
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 animate-pulse" />
           <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
           
           <div className="relative z-10 flex items-center justify-between w-full">
-          <div className="flex items-center space-x-3">
-              <div className="relative">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              <div className="relative flex-shrink-0">
                 <div className="relative">
                   <img 
                     src={seller?.avatar || '/default-avatar.png'} 
                     alt={seller?.username || 'User'}
-                    className="w-12 h-12 rounded-full border-2 border-white/30 shadow-lg"
+                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-white/30 shadow-lg"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjQiIGZpbGw9IiM2MzYzNjMiLz4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDE4QzE1LjMxMzcgMTggMTggMTUuMzEzNyAxOCAxMkMxOCA4LjY4NjI5IDE1LjMxMzcgNiAxMiA2QzguNjg2MjkgNiA2IDguNjg2MjkgNiAxMkM2IDE1LjMxMzcgOC42ODYyOSAxOCAxMiAxOFoiIGZpbGw9IndoaXRlIi8+CjwvcGF0aD4KPC9zdmc+Cjwvc3ZnPgo=';
@@ -603,59 +607,59 @@ const ChatPopup: React.FC<ChatPopupProps> = ({
                   </motion.div>
                 )}
               </div>
-            <div>
-              <h3 className="font-semibold text-white">{seller?.username || 'Unknown User'}</h3>
-              <p className="text-xs text-white/70">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-white text-sm sm:text-base truncate">{seller?.username || 'Unknown User'}</h3>
+              <p className="text-xs text-white/70 truncate">
                 {seller?.isOnline ? 'Online now' : `Last seen ${seller?.lastSeen || '2 hours ago'}`}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1 flex-shrink-0">
             <motion.button 
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-white/30"
+              className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg sm:rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-white/30 hidden sm:block"
             >
-              <Phone className="h-4 w-4 text-white drop-shadow-sm" />
+              <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-white drop-shadow-sm" />
             </motion.button>
             <motion.button 
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-white/30"
+              className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg sm:rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-white/30 hidden sm:block"
             >
-              <Video className="h-4 w-4 text-white drop-shadow-sm" />
+              <Video className="h-3 w-3 sm:h-4 sm:w-4 text-white drop-shadow-sm" />
             </motion.button>
             <motion.button 
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-white/30"
+              className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg sm:rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-white/30 hidden md:block"
             >
-              <Info className="h-4 w-4 text-white drop-shadow-sm" />
+              <Info className="h-3 w-3 sm:h-4 sm:w-4 text-white drop-shadow-sm" />
             </motion.button>
             <motion.button 
               onClick={handleDispute}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 hover:bg-red-500/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-red-400/50"
+              className="p-1.5 sm:p-2 hover:bg-red-500/20 rounded-lg sm:rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-red-400/50"
               title="Call Dispute"
             >
-              <AlertTriangle className="h-4 w-4 text-red-400 drop-shadow-sm" />
+              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 drop-shadow-sm" />
             </motion.button>
             <motion.button 
               onClick={onClose}
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 hover:bg-red-500/20 rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-red-400/50"
+              className="p-1.5 sm:p-2 hover:bg-red-500/20 rounded-lg sm:rounded-xl transition-all duration-200 backdrop-blur-sm border border-white/10 hover:border-red-400/50"
             >
-              <X className="h-4 w-4 text-white drop-shadow-sm" />
+              <X className="h-3 w-3 sm:h-4 sm:w-4 text-white drop-shadow-sm" />
             </motion.button>
           </div>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-900/50 via-gray-900/80 to-gray-900 backdrop-blur-sm relative">
+        <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-3 sm:space-y-4 bg-gradient-to-b from-gray-900/50 via-gray-900/80 to-gray-900 backdrop-blur-sm relative min-h-0">
           {/* Subtle pattern overlay */}
           <div className="absolute inset-0 opacity-5" style={{
             backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)`,

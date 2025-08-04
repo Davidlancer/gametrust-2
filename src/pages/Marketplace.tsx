@@ -61,9 +61,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
     <div className="min-h-screen bg-gray-900 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Marketplace</h1>
-          <p className="text-xl text-gray-400">
+        <div className="mb-8 text-center sm:text-left">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 px-2">Marketplace</h1>
+          <p className="text-lg sm:text-xl text-gray-400 px-2">
             Discover premium gaming accounts from verified sellers
           </p>
           {/* Active Filter Badge */}
@@ -77,25 +77,27 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4">
+        <div className="bg-gray-800 rounded-lg p-4 sm:p-6 mb-8 mx-2 sm:mx-0">
+          <div className="flex flex-col gap-4">
             {/* Search Bar */}
-            <div className="flex-1 relative">
+            <div className="w-full relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search accounts, games, or sellers..."
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm sm:text-base"
               />
             </div>
 
+            {/* Filters Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Game Filter */}
             <select
               value={filters.game || ''}
               onChange={(e) => setFilters({...filters, game: e.target.value || undefined})}
-              className="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="px-3 sm:px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
             >
               <option value="">All Games</option>
               {games.map(game => (
@@ -107,7 +109,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
             <select
               value={filters.platform || ''}
               onChange={(e) => setFilters({...filters, platform: e.target.value || undefined})}
-              className="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="px-3 sm:px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base"
             >
               <option value="">All Platforms</option>
               <option value="iOS">iOS</option>
@@ -119,17 +121,18 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="px-3 sm:px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base col-span-1 sm:col-span-2 lg:col-span-1"
             >
               <option value="newest">Newest First</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
               <option value="level">Level</option>
             </select>
+            </div>
           </div>
 
           {/* Filter Toggles */}
-          <div className="flex flex-wrap gap-3 mt-4">
+          <div className="flex flex-wrap gap-2 sm:gap-3 mt-4 justify-center sm:justify-start">
             <button
               onClick={() => setFilters({...filters, verified: filters.verified ? undefined : true})}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -154,8 +157,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
         </div>
 
         {/* Results Header */}
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-gray-400">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4 px-2 sm:px-0">
+          <p className="text-gray-400 text-sm sm:text-base">
             {filteredListings.length} accounts found
           </p>
           <div className="flex items-center space-x-2">
@@ -163,13 +166,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
               onClick={() => setViewMode('grid')}
               className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}
             >
-              <Grid className="h-5 w-5" />
+              <Grid className="h-4 sm:h-5 w-4 sm:w-5" />
             </button>
             <button
               onClick={() => setViewMode('list')}
               className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}
             >
-              <List className="h-5 w-5" />
+              <List className="h-4 sm:h-5 w-4 sm:w-5" />
             </button>
           </div>
         </div>
@@ -177,8 +180,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
         {/* Listings Grid/List */}
         <ComponentTransition show={true} type="fade" key={viewMode}>
           <div className={viewMode === 'grid' 
-            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-            : 'space-y-4'
+            ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-2 sm:px-0'
+            : 'space-y-4 px-2 sm:px-0'
           }>
             {filteredListings.map((listing) => (
             <Card key={listing.id} hover>

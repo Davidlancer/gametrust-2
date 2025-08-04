@@ -21,6 +21,7 @@ import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Badge from '../components/UI/Badge';
 import Modal from '../components/UI/Modal';
+import PaymentSuccessModal from '../components/UI/PaymentSuccessModal';
 import ChatPopup from '../components/UI/ChatPopup';
 import { featuredListings } from '../data/mockData';
 import { useEscrow } from '../hooks/useEscrow';
@@ -36,10 +37,11 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
   const [showImageModal, setShowImageModal] = useState(false);
   const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
   const [showChatPopup, setShowChatPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { createEscrowTransaction, escrow } = useEscrow();
-  const { showSuccess, showError } = useToast();
+  const { showError } = useToast();
 
   // Mock data - in real app, fetch from API
   const listing = featuredListings.find(l => l.id === listingId) || featuredListings[0];
@@ -85,12 +87,8 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
 
       createEscrowTransaction(escrowData);
       
-      showSuccess(
-        'Payment Secured in Escrow',
-        `₦${listing.price.toLocaleString()} has been held securely. The seller will now provide account details.`
-      );
-      
       setShowBuyModal(false);
+      setShowPaymentSuccessModal(true);
       
       // In development mode, show additional info
       if (import.meta.env.MODE === 'development') {
@@ -146,10 +144,10 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
         </button>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           {/* Left Column - All scrollable content */}
-          <div className="col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 lg:space-y-6">
             {/* Main Image Display */}
             <Card padding="none" className="overflow-hidden">
               <div className="relative aspect-video bg-gray-800">
@@ -164,15 +162,15 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                   <>
                     <button
                       onClick={prevImage}
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+                      className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                     <button
                       onClick={nextImage}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+                      className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                   </>
                 )}
@@ -180,26 +178,26 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                 {/* Full Screen Button */}
                 <button
                   onClick={() => setShowImageModal(true)}
-                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+                  className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
                 </button>
 
                 {/* Image Counter */}
-                <div className="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                <div className="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 bg-black/50 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                   {currentImageIndex + 1} / {listing.images.length}
                 </div>
               </div>
 
               {/* Thumbnail Carousel */}
               {listing.images.length > 1 && (
-                <div className="p-4 bg-gray-800/50">
-                  <div className="flex space-x-3 overflow-x-auto">
+                <div className="p-2 sm:p-4 bg-gray-800/50">
+                  <div className="flex space-x-2 sm:space-x-3 overflow-x-auto pb-2">
                     {listing.images.map((image, index) => (
                       <button
                         key={index}
                         onClick={() => setCurrentImageIndex(index)}
-                        className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                        className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-colors ${
                           index === currentImageIndex
                             ? 'border-indigo-500'
                             : 'border-gray-600 hover:border-gray-500'
@@ -224,7 +222,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                 Account Details
               </h3>
               
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
                 <div className="text-center p-4 bg-gray-700/30 rounded-lg">
                   <div className="text-2xl font-bold text-white mb-1">{listing.level}</div>
                   <div className="text-sm text-gray-400">Game Level</div>
@@ -244,7 +242,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
               {/* Features Grid */}
               <div className="mt-6">
                 <h4 className="font-semibold text-white mb-3">Account Features</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {listing.features.map((feature, index) => (
                     <div key={index} className="flex items-center space-x-2 p-2 bg-gray-700/20 rounded-lg">
                       <Crown className="h-4 w-4 text-yellow-400" />
@@ -320,8 +318,8 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
           </div>
 
           {/* Right Column - Sticky Payment Container */}
-          <div className="col-span-1">
-            <div className="relative md:sticky md:top-24 md:self-start">
+          <div className="lg:col-span-1">
+            <div className="relative lg:sticky lg:top-24 lg:self-start">
               {/* Purchase Card */}
               <Card>
               <div className="space-y-6">
@@ -331,24 +329,24 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                     <GamepadIcon className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-white">{listing.game}</h2>
-                    <p className="text-gray-400">{listing.platform}</p>
+                    <h2 className="text-base sm:text-lg font-semibold text-white">{listing.game}</h2>
+                    <p className="text-sm text-gray-400">{listing.platform}</p>
                   </div>
                 </div>
 
                 {/* Title */}
                 <div>
-                  <h1 className="text-2xl font-bold text-white mb-2">{listing.title}</h1>
-                  <div className="flex items-center space-x-2">
+                  <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">{listing.title}</h1>
+                  <div className="flex items-center flex-wrap gap-2">
                     {listing.isVerified && <Badge type="verified" size="sm" />}
                     {listing.hasEscrow && <Badge type="escrow" size="sm" />}
                   </div>
                 </div>
 
                 {/* Price */}
-                <div className="text-center py-4 bg-gray-700/30 rounded-lg">
-                  <div className="text-3xl font-bold text-white mb-1">${listing.price}</div>
-                  <div className="text-sm text-gray-400">One-time payment</div>
+                <div className="text-center py-3 sm:py-4 bg-gray-700/30 rounded-lg">
+                  <div className="text-2xl sm:text-3xl font-bold text-white mb-1">${listing.price}</div>
+                  <div className="text-xs sm:text-sm text-gray-400">One-time payment</div>
                 </div>
 
                 {/* Action Buttons */}
@@ -366,21 +364,21 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                     </p>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2 sm:gap-3">
                     <Button
                       size="lg"
                       onClick={() => setShowBuyModal(true)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 sm:py-4 text-sm sm:text-base transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-green-500/25"
                     >
-                      <Shield className="mr-2 h-5 w-5" />
+                      <Shield className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Buy with Escrow
                     </Button>
                     <Button
                       size="lg"
                       onClick={handleChatWithSeller}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-purple-500/25"
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 sm:py-4 text-sm sm:text-base transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-purple-500/25"
                     >
-                      <MessageCircle className="mr-2 h-5 w-5" />
+                      <MessageCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                       Chat with Seller
                     </Button>
                     <p className="text-xs text-gray-400 text-center mt-1">
@@ -390,16 +388,16 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
                 )}
 
                 {/* Trust Indicators */}
-                <div className="space-y-3 pt-4 border-t border-gray-700">
-                  <div className="flex items-center space-x-2 text-sm text-gray-300">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
+                <div className="space-y-2 sm:space-y-3 pt-3 sm:pt-4 border-t border-gray-700">
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-300">
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0" />
                     <span>Escrow protection included</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-300">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-300">
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 flex-shrink-0" />
                     <span>Account verified by GameTrust</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-300">
+                  <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-300">
                     <CheckCircle className="h-4 w-4 text-green-400" />
                     <span>24/7 customer support</span>
                   </div>
@@ -653,6 +651,15 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
           </div>
         </div>
       </Modal>
+
+      {/* Payment Success Modal */}
+      <PaymentSuccessModal
+        isOpen={showPaymentSuccessModal}
+        onClose={() => setShowPaymentSuccessModal(false)}
+        amount={listing.price}
+        autoClose={true}
+        autoCloseDelay={4000}
+      />
 
       {/* Chat Popup */}
       <ChatPopup

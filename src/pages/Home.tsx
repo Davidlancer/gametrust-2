@@ -10,11 +10,13 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ onNavigate }) => {
   return (
-    <div className="min-h-screen bg-gray-900">
-      <Hero onNavigate={onNavigate} />
-      <HowItWorks />
+    <div className="min-h-screen bg-gray-900 overflow-x-hidden">
+      <div className="w-full max-w-screen-2xl mx-auto">
+        <Hero onNavigate={onNavigate} />
+      <HowItWorks onNavigate={onNavigate} />
       <FeaturedListings onNavigate={onNavigate} />
       <Testimonials />
+      </div>
     </div>
   );
 };
