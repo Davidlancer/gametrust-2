@@ -6,11 +6,16 @@ import {
   WalletIcon,
   UserGroupIcon,
   EyeIcon,
-  PlusIcon,
+
   GiftIcon,
   ExclamationTriangleIcon,
   ShieldCheckIcon,
-  ExclamationCircleIcon
+  ExclamationCircleIcon,
+  SparklesIcon,
+  TrophyIcon,
+  HeartIcon,
+  BoltIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
 import { BuyerDashboardPage } from '../../types/dashboard';
@@ -31,50 +36,62 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, tr
     whileHover={{ 
       scale: 1.02,
       y: -2,
-      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1)"
+      boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05)"
     }}
-    initial={{ opacity: 0, y: 20 }}
+    initial={{ opacity: 0, y: 30 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4, ease: "easeOut" }}
-    className="relative bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl p-5 lg:p-7 hover:border-indigo-400/40 transition-all duration-500 group overflow-hidden"
+    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+    className="relative bg-gradient-to-br from-slate-50/[0.02] via-white/[0.03] to-slate-100/[0.02] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5 lg:p-6 hover:border-white/[0.12] transition-all duration-500 group overflow-hidden shadow-xl shadow-black/5 h-[140px] lg:h-[160px]"
+    style={{
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 100%)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)'
+    }}
   >
-    {/* Background glow effect */}
-    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    {/* Ambient glow effect */}
+    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.03] via-purple-500/[0.02] to-pink-500/[0.03] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
     
-    {/* Animated border gradient */}
-    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm" />
+    {/* Floating particles effect */}
+    <div className="absolute inset-0 overflow-hidden rounded-3xl">
+      <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+      <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-gradient-to-tr from-pink-400/8 to-orange-400/8 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+    </div>
     
-    <div className="relative z-10">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`relative w-12 h-12 lg:w-14 lg:h-14 ${color} rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+    <div className="relative z-10 h-full flex flex-col">
+      <div className="flex items-start justify-between mb-4">
+        <div className={`relative w-12 h-12 lg:w-14 lg:h-14 ${color} rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105`}>
           <Icon className="w-6 h-6 lg:w-7 lg:h-7 text-white drop-shadow-sm" />
-          {/* Icon glow effect */}
-          <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          {/* Icon shimmer effect */}
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
         {trend && (
-          <motion.span 
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-xs lg:text-sm bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent font-semibold px-2 py-1 bg-green-400/10 rounded-lg border border-green-400/20 ml-3"
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-emerald-500/10 to-green-500/10 backdrop-blur-sm rounded-lg border border-emerald-400/20 shadow-sm"
           >
-            {trend}
-          </motion.span>
+            <SparklesIcon className="w-3 h-3 text-emerald-400" />
+            <span className="text-xs font-medium bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+              {trend}
+            </span>
+          </motion.div>
         )}
       </div>
       
-      <div className="space-y-2">
+      <div className="flex-1 flex flex-col justify-center space-y-2">
         <motion.h3 
-          className="text-xl lg:text-3xl font-bold bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent leading-tight"
-          whileHover={{ scale: 1.05 }}
-          transition={{ type: "spring", stiffness: 300 }}
+          className="text-xl lg:text-2xl font-bold bg-gradient-to-br from-white via-slate-100 to-slate-200 bg-clip-text text-transparent leading-tight tracking-tight"
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
         >
           {value}
         </motion.h3>
-        <p className="text-sm lg:text-base text-gray-300 font-medium tracking-wide">{title}</p>
+        <p className="text-sm text-slate-300 font-medium opacity-80">{title}</p>
       </div>
       
-      {/* Subtle bottom accent line */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500/50 via-purple-500/50 to-pink-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-b-2xl" />
+      {/* Animated bottom accent */}
+      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-indigo-400/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
     </div>
   </motion.div>
 );
@@ -167,6 +184,11 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
     handlePageChange('referral');
   };
 
+  const handleSettingsClick = () => {
+    showInfo('Settings', 'Opening account settings...');
+    handlePageChange('settings');
+  };
+
   const handleConfirmDelivery = () => {
     try {
       if (escrowData && updateEscrowStatus) {
@@ -197,34 +219,108 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
     }
   };
   return (
-    <div className="h-full flex flex-col space-y-4 lg:space-y-6 overflow-y-auto">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl p-4 lg:p-6 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-white mb-2">Welcome back, BuyerUser 👋</h1>
-            <p className="text-sm lg:text-base text-gray-300">Ready to find your next gaming account?</p>
+    <div className="min-h-full w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-6 space-y-6 lg:space-y-8 overflow-y-auto" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Hero Welcome Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="relative bg-gradient-to-br from-slate-50/[0.03] via-white/[0.05] to-slate-100/[0.03] backdrop-blur-2xl border border-white/[0.1] rounded-2xl p-6 lg:p-8 overflow-hidden shadow-xl shadow-black/5"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 100%)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)'
+        }}
+      >
+        {/* Ambient background effects */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.02] via-purple-500/[0.03] to-pink-500/[0.02] opacity-80" />
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-indigo-400/10 to-purple-400/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-gradient-to-tr from-pink-400/8 to-orange-400/8 rounded-full blur-3xl" />
+        
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 lg:gap-8">
+          <div className="flex-1 space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl flex-shrink-0">
+                <TrophyIcon className="w-7 h-7 lg:w-8 lg:h-8 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <motion.h1 
+                  className="text-2xl lg:text-3xl xl:text-4xl font-black bg-gradient-to-br from-white via-slate-100 to-slate-200 bg-clip-text text-transparent leading-tight tracking-tight mb-2"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                >
+                  Welcome back, Blunt! 👋
+                </motion.h1>
+                <motion.p 
+                  className="text-sm lg:text-base text-slate-300 font-medium opacity-90 leading-relaxed"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                >
+                  Ready to discover your next legendary gaming account?
+                </motion.p>
+              </div>
+            </div>
+            
+            {/* Quick stats preview */}
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20">
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+                <div>
+                  <span className="text-green-400 font-semibold text-xs">Active Orders</span>
+                  <p className="text-white font-bold text-base">1</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-pink-500/10 to-rose-500/10 rounded-xl border border-pink-500/20">
+                <HeartIcon className="w-4 h-4 text-pink-400" />
+                <div>
+                  <span className="text-pink-400 font-semibold text-xs">Wallet Balance</span>
+                  <p className="text-white font-bold text-base">₦100K</p>
+                </div>
+              </div>
+            </motion.div>
           </div>
-          <div className="hidden lg:block">
+          
+          <motion.div 
+            className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:gap-3 lg:min-w-[240px]"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+          >
             <Button
               variant="primary"
-              size="sm"
-              className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+              size="md"
+              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 shadow-lg hover:shadow-xl transition-all duration-300 border-0 font-semibold rounded-xl px-6 py-3 text-sm"
               onClick={handleMarketplaceClick}
             >
-              <EyeIcon className="w-4 h-4 mr-2" />
-              Browse Marketplace
+              <BoltIcon className="w-4 h-4 mr-2" />
+              Explore Marketplace
             </Button>
-          </div>
+            <Button
+              variant="outline"
+              size="md"
+              className="border-white/20 text-slate-300 hover:bg-white/5 hover:border-white/30 backdrop-blur-sm font-medium rounded-xl px-6 py-3 text-sm"
+              onClick={() => handlePageChange('wallet')}
+            >
+              <WalletIcon className="w-4 h-4 mr-2" />
+              Fund Wallet
+            </Button>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats Grid */}
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.2 }}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8 flex-shrink-0"
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6"
       >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -340,87 +436,254 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
         </motion.div>
       )}
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 min-h-0">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
         {/* Recent Activity */}
-        <div className="lg:col-span-2 bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 lg:p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-4 lg:mb-6 flex-shrink-0">
-            <h2 className="text-lg lg:text-xl font-semibold text-white">Recent Activity</h2>
-            <Button variant="ghost" size="sm" className="text-indigo-400 hover:bg-indigo-500/10">
-              View All
-            </Button>
-          </div>
+        <motion.div 
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+           className="xl:col-span-2 relative bg-gradient-to-br from-slate-50/[0.02] via-white/[0.04] to-slate-100/[0.02] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 lg:p-7 flex flex-col overflow-hidden shadow-lg shadow-black/5 min-h-[500px]"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 100%)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)'
+          }}
+        >
+          {/* Subtle background glow */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.01] via-purple-500/[0.02] to-pink-500/[0.01] opacity-60" />
           
-          <div className="flex-1 space-y-3 lg:space-y-4 overflow-y-auto">
-            {recentActivity.map((activity) => {
-              const Icon = getActivityIcon(activity.type);
-              return (
-                <motion.div
-                  key={activity.id}
-                  whileHover={{ scale: 1.01 }}
-                  className="flex items-center space-x-3 lg:space-x-4 p-3 lg:p-4 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-all duration-200 cursor-pointer"
-                >
-                  <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center ${
-                    activity.status === 'success' ? 'bg-green-500/20 text-green-400' :
-                    activity.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    <Icon className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm lg:text-base font-medium text-white truncate">{activity.title}</p>
-                    <p className="text-xs lg:text-sm text-gray-400 truncate">{activity.description}</p>
-                  </div>
-                  <span className="text-xs lg:text-sm text-gray-500 flex-shrink-0">{activity.time}</span>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 lg:p-6 flex flex-col">
-          <h2 className="text-lg lg:text-xl font-semibold text-white mb-4 lg:mb-6 flex-shrink-0">Quick Actions</h2>
-          
-          <div className="flex-1 space-y-3 lg:space-y-4">
-            <Button
-              variant="outline"
-              className="w-full justify-start border-gray-700 hover:border-indigo-400 hover:bg-indigo-500/10 text-sm lg:text-base py-2 lg:py-3"
-              onClick={() => handlePageChange('orders')}
-            >
-              <EyeIcon className="w-4 h-4 lg:w-5 lg:h-5 mr-2 lg:mr-3" />
-              View All Orders
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="w-full justify-start border-gray-700 hover:border-purple-400 hover:bg-purple-500/10 text-sm lg:text-base py-2 lg:py-3"
-              onClick={handleFundWallet}
-            >
-              <PlusIcon className="w-4 h-4 lg:w-5 lg:h-5 mr-2 lg:mr-3" />
-              Fund Wallet
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="w-full justify-start border-gray-700 hover:border-orange-400 hover:bg-orange-500/10 text-sm lg:text-base py-2 lg:py-3"
-              onClick={handleReferralClick}
-            >
-              <GiftIcon className="w-4 h-4 lg:w-5 lg:h-5 mr-2 lg:mr-3" />
-              Refer & Earn ₦500
-            </Button>
-            
-            <div className="pt-2 lg:pt-4">
+          <div className="relative z-10 flex-1 flex flex-col">
+             <div className="flex items-center justify-between mb-6 flex-shrink-0">
+               <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/10">
+                   <BoltIcon className="w-5 h-5 lg:w-6 lg:h-6 text-blue-400" />
+                 </div>
+                 <div>
+                   <h2 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">
+                     Recent Activity
+                   </h2>
+                   <p className="text-sm text-slate-400 font-medium">Your latest transactions</p>
+                 </div>
+               </div>
               <Button
-                variant="primary"
-                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-sm lg:text-base py-2 lg:py-3"
-                onClick={handleMarketplaceClick}
+                variant="ghost"
+                size="sm"
+                className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 backdrop-blur-sm border border-white/10 hover:border-indigo-400/30 rounded-xl font-medium transition-all duration-300 px-3 py-2 text-sm"
+                onClick={() => handlePageChange('orders')}
               >
-                <EyeIcon className="w-4 h-4 lg:w-5 lg:h-5 mr-2 lg:mr-3" />
-                Browse Marketplace
+                View All
+                <ArrowRightIcon className="w-3 h-3 ml-1" />
               </Button>
             </div>
+            
+            <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+              {recentActivity.map((activity, index) => {
+                const Icon = getActivityIcon(activity.type);
+                return (
+                  <motion.div
+                    key={activity.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    whileHover={{ 
+                      scale: 1.01, 
+                      x: 4,
+                      transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] }
+                    }}
+                    className="group relative bg-gradient-to-r from-white/[0.03] to-white/[0.06] backdrop-blur-sm border border-white/[0.08] rounded-xl p-4 lg:p-5 hover:border-white/[0.15] transition-all duration-300 cursor-pointer overflow-hidden"
+                    style={{
+                      background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)'
+                    }}
+                  >
+                    {/* Hover glow effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/[0.02] to-purple-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    <div className="relative z-10 flex items-center justify-between">
+                   <div className="flex items-center space-x-5">
+                     <div className={`relative w-14 h-14 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center backdrop-blur-sm border shadow-lg ${
+                          activity.status === 'success' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                          activity.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                          'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                        }`}>
+                          <Icon className="w-6 h-6 lg:w-7 lg:h-7" />
+                          {/* Status pulse effect */}
+                          <div className={`absolute inset-0 rounded-2xl animate-ping opacity-20 ${
+                            activity.status === 'success' ? 'bg-emerald-400' :
+                            activity.status === 'pending' ? 'bg-amber-400' :
+                            'bg-rose-400'
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                       <p className="text-lg lg:text-xl font-semibold text-white group-hover:text-slate-100 transition-colors truncate">
+                         {activity.title}
+                       </p>
+                       <p className="text-base text-slate-400 font-medium mt-2 group-hover:text-slate-300 transition-colors truncate">
+                         {activity.description}
+                       </p>
+                     </div>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-3 flex-shrink-0">
+                     <div className={`px-4 py-2 rounded-full text-sm font-bold border backdrop-blur-sm ${
+                          activity.status === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                          activity.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                          'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        }`}>
+                          {activity.status === 'success' ? '✓ Completed' :
+                           activity.status === 'pending' ? '⏳ Pending' : '⚠ Issue'}
+                        </div>
+                        <span className="text-base text-slate-400 font-medium">{activity.time}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </motion.div>
+
+        {/* Quick Actions */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="relative bg-gradient-to-br from-slate-50/[0.02] via-white/[0.04] to-slate-100/[0.02] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 lg:p-7 flex flex-col overflow-hidden shadow-lg shadow-black/5 min-h-[500px]"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 100%)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)'
+          }}
+        >
+          {/* Ambient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.01] via-pink-500/[0.02] to-orange-500/[0.01] opacity-60" />
+          
+          <div className="relative z-10 flex-1 flex flex-col">
+            <div className="flex items-center gap-3 mb-6 flex-shrink-0">
+              <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-violet-500/20 to-pink-500/20 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/10">
+                <SparklesIcon className="w-5 h-5 lg:w-6 lg:h-6 text-violet-400" />
+              </div>
+              <div>
+                <h2 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">
+                  Quick Actions
+                </h2>
+                <p className="text-sm text-slate-400 font-medium">Get things done faster</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4 flex-1">
+              <motion.div
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <Button
+                  variant="primary"
+                  className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 justify-start text-left shadow-lg hover:shadow-xl transition-all duration-300 border-0 font-semibold rounded-xl py-3 h-auto"
+                  onClick={handleMarketplaceClick}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <EyeIcon className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-white text-sm">Browse Marketplace</div>
+                      <div className="text-xs text-white/80 font-medium">Discover gaming accounts</div>
+                    </div>
+                  </div>
+                </Button>
+              </motion.div>
+              
+              <motion.div
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <Button
+                  variant="outline"
+                  className="w-full border-white/10 text-slate-300 hover:bg-white/5 hover:border-white/20 justify-start text-left backdrop-blur-sm font-medium rounded-xl py-3 h-auto transition-all duration-300"
+                  onClick={() => handlePageChange('orders')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm border border-blue-500/20">
+                      <ShoppingBagIcon className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-white text-sm">View All Orders</div>
+                      <div className="text-xs text-slate-400 font-medium">Track your purchases</div>
+                    </div>
+                  </div>
+                </Button>
+              </motion.div>
+              
+              <motion.div
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <Button
+                  variant="outline"
+                  className="w-full border-white/10 text-slate-300 hover:bg-white/5 hover:border-white/20 justify-start text-left backdrop-blur-sm font-medium rounded-xl py-3 h-auto transition-all duration-300"
+                  onClick={handleFundWallet}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm border border-emerald-500/20">
+                      <WalletIcon className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-white text-sm">Fund Wallet</div>
+                      <div className="text-xs text-slate-400 font-medium">Add funds & track balance</div>
+                    </div>
+                  </div>
+                </Button>
+              </motion.div>
+              
+              <motion.div
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <Button
+                  variant="outline"
+                  className="w-full border-white/10 text-slate-300 hover:bg-white/5 hover:border-white/20 justify-start text-left backdrop-blur-sm font-medium rounded-xl py-3 h-auto transition-all duration-300"
+                  onClick={handleReferralClick}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm border border-orange-500/20">
+                      <GiftIcon className="w-4 h-4 text-orange-400" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-white text-sm">Refer & Earn ₦500</div>
+                      <div className="text-xs text-slate-400 font-medium">Earn rewards & bonuses</div>
+                    </div>
+                  </div>
+                </Button>
+              </motion.div>
+              
+              <motion.div
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.99 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <Button
+                  variant="outline"
+                  className="w-full border-white/10 text-slate-300 hover:bg-white/5 hover:border-white/20 justify-start text-left backdrop-blur-sm font-medium rounded-xl py-3 h-auto transition-all duration-300"
+                  onClick={handleSettingsClick}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm border border-amber-500/20">
+                      <ExclamationCircleIcon className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-white text-sm">Settings</div>
+                      <div className="text-xs text-slate-400 font-medium">Account & preferences</div>
+                    </div>
+                  </div>
+                </Button>
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
