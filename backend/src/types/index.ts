@@ -2,7 +2,9 @@ import { Request } from 'express';
 
 export interface User {
   id: string;
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
   email: string;
   password?: string;
   createdAt: Date;
@@ -19,7 +21,9 @@ export interface AuthRequest extends Request {
 }
 
 export interface RegisterData {
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -28,6 +32,12 @@ export interface RegisterData {
 export interface LoginData {
   email: string;
   password: string;
+}
+
+export interface SocialAuthData {
+  token: string;
+  email: string;
+  name: string;
 }
 
 export interface ApiResponse<T = any> {

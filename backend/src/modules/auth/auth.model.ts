@@ -19,7 +19,7 @@ export class AuthModel {
     
     return await prisma.user.create({
       data: {
-        name,
+        name: name?.trim() || 'User',
         email: email.toLowerCase(),
         password: hashedPassword
       },

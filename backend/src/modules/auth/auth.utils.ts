@@ -48,12 +48,12 @@ export const verifyToken = (token: string): TokenPayload => {
 export const generateTokenPair = (user: User): AuthTokens => {
   const payload: TokenPayload = {
     id: user.id,
-    name: user.name,
+    name: user?.name ?? "",
     email: user.email
   };
 
-  const accessToken = generateAccessToken({ id: user.id, name: user.name, email: user.email });
-  const refreshToken = generateRefreshToken({ id: user.id, name: user.name, email: user.email });
+  const accessToken = generateAccessToken(payload);
+  const refreshToken = generateRefreshToken(payload);
 
   return {
     accessToken,

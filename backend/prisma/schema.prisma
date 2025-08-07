@@ -10,13 +10,437 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// datasource db {
+//   provider = "sqlite"
+//   url      = "file:./dev.db"
+// }
+
+// User Authentication Models
 model User {
   id        String   @id @default(cuid())
-  name      String
   email     String   @unique
-  password  String
+  password  String?
+  isEmailVerified Boolean @default(false)
+  emailVerificationToken String?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  isActive  Boolean  @default(true)
+  lastLoginAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relations
+  profile              UserProfile?
+  sessions             Session[]
+  socialAccounts       SocialAccount[]
+  listings             Listing[]
+  purchases            Purchase[]
+  sales                Sale[]
+  escrowsBuyer         Escrow[] @relation("EscrowBuyer")
+  reviewsGiven         Review[] @relation("ReviewerReviews")
+  reviewsReceived      Review[] @relation("RevieweeReviews")
+  disputesInitiated    Dispute[] @relation("DisputeInitiator")
+  disputesResponded    Dispute[] @relation("DisputeRespondent")
+  reportsSubmitted     Report[] @relation("ReportSubmitter")
+  reportsReceived      Report[] @relation("ReportedUser")
+  notifications        Notification[]
+
   @@map("users")
+}
+
+model UserProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  firstName String?
+  lastName  String?
+  displayName String?
+  avatar    String?
+  bio       String?
+  country   String?
+  timezone  String?
+  language  String   @default("en")
+  phone     String?
+  isPhoneVerified Boolean @default(false)
+  dateOfBirth DateTime?
+  
+  // Gaming preferences
+  favoriteGames String[]
+  gamingPlatforms String[]
+  
+  // Seller stats
+  totalSales Int @default(0)
+  successfulSales Int @default(0)
+  rating    Float @default(0.0)
+  totalReviews Int @default(0)
+  
+  // Verification status
+  isVerified Boolean @default(false)
+  verificationLevel String @default("basic") // basic, verified, premium
+  verifiedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  refreshToken String @unique
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  ipAddress String?
+  userAgent String?
+  deviceInfo String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model SocialAccount {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String   // google, apple, facebook, etc.
+  providerId String
+  email     String?
+  name      String?
+  avatar    String?
+  accessToken String?
+  refreshToken String?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@map("social_accounts")
+}
+
+// Marketplace Models
+model Game {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  description String?
+  genre     String[]
+  platform  String[] // PC, Mobile, Console
+  publisher String?
+  releaseDate DateTime?
+  imageUrl  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  listings  Listing[]
+
+  @@map("games")
+}
+
+model Listing {
+  id        String   @id @default(cuid())
+  sellerId  String
+  gameId    String
+  title     String
+  description String
+  price     Float
+  currency  String   @default("USD")
+  
+  // Account details
+  accountLevel Int?
+  accountRank String?
+  accountStats Json? // Flexible stats storage
+  serverRegion String?
+  platform  String
+  
+  // Account credentials (encrypted)
+  accountEmail String
+  accountPassword String // This should be encrypted
+  additionalInfo Json? // Any extra account details
+  
+  // Listing status
+  status    ListingStatus @default(ACTIVE)
+  isPromoted Boolean @default(false)
+  promotedUntil DateTime?
+  
+  // Images and proof
+  images    String[]
+  proofImages String[] // Screenshots proving account ownership
+  
+  // Visibility and features
+  isVisible Boolean @default(true)
+  isFeatured Boolean @default(false)
+  viewCount Int @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime?
+
+  // Relations
+  seller    User @relation(fields: [sellerId], references: [id])
+  game      Game @relation(fields: [gameId], references: [id])
+  purchases Purchase[]
+  escrows   Escrow[]
+  reports   Report[]
+
+  @@map("listings")
+}
+
+model Purchase {
+  id        String   @id @default(cuid())
+  buyerId   String
+  listingId String
+  sellerId  String
+  amount    Float
+  currency  String   @default("USD")
+  status    PurchaseStatus @default(PENDING)
+  
+  // Payment details
+  paymentMethod String?
+  paymentId String? // External payment processor ID
+  
+  // Timestamps
+  purchasedAt DateTime @default(now())
+  completedAt DateTime?
+  cancelledAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  buyer   User @relation(fields: [buyerId], references: [id])
+  listing Listing @relation(fields: [listingId], references: [id])
+  // escrow  Escrow?
+  sale    Sale?
+  reviews Review[]
+  dispute Dispute?
+
+  @@map("purchases")
+}
+
+model Sale {
+  id        String   @id @default(cuid())
+  sellerId  String
+  purchaseId String @unique
+  amount    Float
+  currency  String   @default("USD")
+  commission Float // Platform commission
+  netAmount Float   // Amount after commission
+  status    SaleStatus @default(PENDING)
+  
+  // Payout details
+  payoutMethod String?
+  payoutId  String?
+  paidOutAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  seller    User @relation(fields: [sellerId], references: [id])
+  purchase  Purchase @relation(fields: [purchaseId], references: [id])
+
+  @@map("sales")
+}
+
+model Escrow {
+  id        String   @id @default(cuid())
+  purchaseId String @unique
+  listingId String
+  buyerId   String
+  sellerId  String
+  amount    Float
+  currency  String   @default("USD")
+  status    EscrowStatus @default(PENDING)
+  
+  // Escrow timeline
+  createdAt DateTime @default(now())
+  fundsHeldAt DateTime?
+  accountDeliveredAt DateTime?
+  buyerConfirmedAt DateTime?
+  releasedAt DateTime?
+  disputeStartedAt DateTime?
+  resolvedAt DateTime?
+  
+  // Account delivery proof
+  deliveryProof Json? // Screenshots, credentials, etc.
+  buyerNotes String?
+  sellerNotes String?
+  
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  // purchase  Purchase @relation(fields: [purchaseId], references: [id])
+  listing   Listing @relation(fields: [listingId], references: [id])
+  buyer     User @relation("EscrowBuyer", fields: [buyerId], references: [id])
+  // dispute   Dispute @relation("EscrowDispute", fields: [purchaseId], references: [purchaseId])
+
+  @@map("escrows")
+}
+
+model Review {
+  id             String   @id @default(cuid())
+  reviewerId     String
+  revieweeId     String
+  purchaseId     String
+  rating         Int      // 1-5 stars
+  comment        String?
+  isSellerReview Boolean  // true if reviewing seller, false if reviewing buyer
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  reviewer  User     @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  reviewee  User     @relation("RevieweeReviews", fields: [revieweeId], references: [id])
+  purchase  Purchase @relation(fields: [purchaseId], references: [id])
+
+  @@map("reviews")
+}
+
+model Dispute {
+  id            String        @id @default(cuid())
+  purchaseId    String        @unique
+  initiatorId   String
+  respondentId  String
+  adminId       String?
+  reason        String
+  description   String
+  status        DisputeStatus @default(OPEN)
+  priority      DisputePriority @default(MEDIUM)
+  resolution    String?
+  favoredParty  String?
+  evidence      String[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  reviewedAt    DateTime?
+  resolvedAt    DateTime?
+  closedAt      DateTime?
+
+  // Relations
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  initiator  User @relation("DisputeInitiator", fields: [initiatorId], references: [id])
+  respondent User @relation("DisputeRespondent", fields: [respondentId], references: [id])
+
+  @@map("disputes")
+}
+
+model Report {
+  id                String       @id @default(cuid())
+  reporterId        String
+  reportedUserId    String?
+  reportedListingId String?
+  adminId           String?
+  reason            String
+  description       String
+  status            ReportStatus @default(PENDING)
+  resolution        String?
+  actionTaken       String?
+  evidence          String[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  reviewedAt        DateTime?
+  resolvedAt        DateTime?
+  dismissedAt       DateTime?
+
+  // Relations
+  reporter        User @relation("ReportSubmitter", fields: [reporterId], references: [id])
+  reportedUser    User? @relation("ReportedUser", fields: [reportedUserId], references: [id])
+  reportedListing Listing? @relation(fields: [reportedListingId], references: [id])
+
+  @@map("reports")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json? // Additional notification data
+  isRead    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Enums
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  SOLD
+  EXPIRED
+  SUSPENDED
+  DELETED
+}
+
+enum PurchaseStatus {
+  PENDING
+  PAID
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+  REFUNDED
+}
+
+enum SaleStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum EscrowStatus {
+  PENDING
+  FUNDED
+  DELIVERED
+  CONFIRMED
+  RELEASED
+  DISPUTED
+  CANCELLED
+  REFUNDED
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum DisputePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum NotificationType {
+  PURCHASE_CONFIRMATION
+  PAYMENT_RECEIVED
+  ACCOUNT_DELIVERED
+  ESCROW_RELEASED
+  DISPUTE_OPENED
+  REVIEW_RECEIVED
+  LISTING_EXPIRED
+  SYSTEM_ANNOUNCEMENT
 }
