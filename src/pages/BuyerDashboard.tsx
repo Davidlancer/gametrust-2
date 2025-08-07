@@ -163,7 +163,7 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+              className="fixed inset-0 bg-black/50 z-[50] lg:hidden"
             />
           )}
         </AnimatePresence>

@@ -60,7 +60,7 @@ export const useNotifications = () => {
   // Listen for new chat messages
   useEffect(() => {
     const handleNewChatMessage = (event: CustomEvent) => {
-      const { orderId, message, fromUser, userRole } = event.detail;
+      const { orderId, fromUser } = event.detail;
       
       // Add notification for new message
       addNotification({
@@ -170,8 +170,8 @@ export const useNotifications = () => {
   }, [addNotification]);
 
   const initializeMockData = useCallback(() => {
-    const devMode = localStorage.getItem('devMode') === 'true';
-    if (!devMode || notifications.length > 0) return;
+    // Always initialize mock data if no notifications exist
+    if (notifications.length > 0) return;
 
     const mockNotifications: Notification[] = [
       {
@@ -233,6 +233,14 @@ export const useNotifications = () => {
 
     saveNotifications(mockNotifications);
   }, [notifications.length, saveNotifications]);
+
+  // Initialize mock data after component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      initializeMockData();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [initializeMockData]);
 
   const openNotificationModal = useCallback((notification: Notification) => {
     setModalNotification(notification);

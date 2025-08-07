@@ -57,7 +57,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({
       animate={{
         x: isDesktop ? 0 : (sidebarOpen ? 0 : '-100%')
       }}
-      className="fixed top-0 bottom-0 left-0 z-40 w-64 xl:w-72 bg-gradient-to-b from-gray-900 to-gray-950 border-r border-gray-700/50 lg:translate-x-0 lg:static lg:w-64 xl:w-72 lg:flex-shrink-0 flex flex-col shadow-2xl backdrop-blur-sm"
+      className="fixed top-0 bottom-0 left-0 z-[60] w-64 xl:w-72 bg-gradient-to-b from-gray-900 to-gray-950 border-r border-gray-700/50 lg:translate-x-0 lg:static lg:w-64 xl:w-72 lg:flex-shrink-0 flex flex-col shadow-2xl backdrop-blur-sm lg:z-40"
     >
       {/* Sidebar Header */}
       <div className="flex items-center justify-between h-16 lg:h-18 px-4 lg:px-6 border-b border-gray-700/50 flex-shrink-0 bg-gray-800/30">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ShoppingBagIcon,
@@ -6,7 +6,6 @@ import {
   WalletIcon,
   UserGroupIcon,
   EyeIcon,
-
   GiftIcon,
   ExclamationTriangleIcon,
   ShieldCheckIcon,
@@ -15,7 +14,11 @@ import {
   TrophyIcon,
   HeartIcon,
   BoltIcon,
-  ArrowRightIcon
+  ArrowRightIcon,
+  ChatBubbleLeftRightIcon,
+  ClockIcon,
+  FunnelIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
 import { BuyerDashboardPage } from '../../types/dashboard';
@@ -98,45 +101,74 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, tr
 
 interface RecentActivityItem {
   id: string;
-  type: 'order' | 'payment' | 'dispute' | 'referral';
+  type: 'order' | 'payment' | 'dispute' | 'referral' | 'message' | 'access';
   title: string;
   description: string;
   time: string;
+  timestamp: string;
   status: 'success' | 'pending' | 'warning';
+  amount?: string;
 }
 
 const recentActivity: RecentActivityItem[] = [
   {
     id: '1',
     type: 'order',
-    title: 'CODM Legendary Account',
-    description: 'Order delivered - Confirm access (₦70,000)',
+    title: 'Order Placed',
+    description: 'CODM Legendary Account - Awaiting delivery',
     time: '2 hours ago',
-    status: 'pending'
+    timestamp: '03 Aug, 2025 – 2:30 PM',
+    status: 'pending',
+    amount: '₦70,000'
   },
   {
     id: '2',
-    type: 'order',
-    title: 'PUBG Elite Account',
-    description: 'Order completed successfully (₦50,000)',
+    type: 'access',
+    title: 'Access Confirmed',
+    description: 'PUBG Elite Account - Payment released to seller',
     time: '1 day ago',
-    status: 'success'
+    timestamp: '02 Aug, 2025 – 4:15 PM',
+    status: 'success',
+    amount: '₦50,000'
   },
   {
     id: '3',
-    type: 'dispute',
-    title: 'Free Fire God Mode',
-    description: 'Dispute opened - Under review (₦30,000)',
+    type: 'message',
+    title: 'New Message',
+    description: 'Seller responded about Free Fire account details',
     time: '2 days ago',
-    status: 'warning'
+    timestamp: '01 Aug, 2025 – 11:20 AM',
+    status: 'success'
   },
   {
     id: '4',
+    type: 'dispute',
+    title: 'Dispute Opened',
+    description: 'Free Fire God Mode - Under admin review',
+    time: '2 days ago',
+    timestamp: '01 Aug, 2025 – 9:45 AM',
+    status: 'warning',
+    amount: '₦30,000'
+  },
+  {
+    id: '5',
     type: 'referral',
     title: 'Referral Bonus',
-    description: '₦500 earned from new user',
+    description: 'Earned from new user @gamer456 registration',
     time: '3 days ago',
-    status: 'success'
+    timestamp: '31 Jul, 2025 – 6:30 PM',
+    status: 'success',
+    amount: '₦500'
+  },
+  {
+    id: '6',
+    type: 'payment',
+    title: 'Wallet Funded',
+    description: 'Added funds via bank transfer',
+    time: '4 days ago',
+    timestamp: '30 Jul, 2025 – 3:15 PM',
+    status: 'success',
+    amount: '₦25,000'
   }
 ];
 
@@ -150,10 +182,43 @@ const getActivityIcon = (type: string) => {
       return ExclamationTriangleIcon;
     case 'referral':
       return UserGroupIcon;
+    case 'message':
+      return ChatBubbleLeftRightIcon;
+    case 'access':
+      return CheckCircleIcon;
     default:
       return ShoppingBagIcon;
   }
 };
+
+const getActivityEmoji = (type: string) => {
+  switch (type) {
+    case 'order':
+      return '🛒';
+    case 'payment':
+      return '💳';
+    case 'dispute':
+      return '⚠️';
+    case 'referral':
+      return '🎁';
+    case 'message':
+      return '💬';
+    case 'access':
+      return '✅';
+    default:
+      return '🛒';
+  }
+};
+
+const filterOptions = [
+  { value: 'all', label: 'All Activity' },
+  { value: 'order', label: 'Orders' },
+  { value: 'message', label: 'Messages' },
+  { value: 'access', label: 'Access Confirmations' },
+  { value: 'payment', label: 'Payments' },
+  { value: 'dispute', label: 'Disputes' },
+  { value: 'referral', label: 'Referrals' }
+];
 
 interface BuyerDashboardOverviewProps {
   handlePageChange: (page: BuyerDashboardPage) => void;
@@ -163,6 +228,8 @@ interface BuyerDashboardOverviewProps {
 const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handlePageChange }) => {
   const { showSuccess, showInfo, showError } = useToast();
   const { escrow: escrowData, updateEscrowStatus } = useEscrow();
+  const [activityFilter, setActivityFilter] = useState('all');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
   // Safe fallbacks
   const escrowAmount = escrowData?.amount || 0;
@@ -465,80 +532,158 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
                    <p className="text-sm text-slate-400 font-medium">Your latest transactions</p>
                  </div>
                </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 backdrop-blur-sm border border-white/10 hover:border-indigo-400/30 rounded-xl font-medium transition-all duration-300 px-3 py-2 text-sm"
-                onClick={() => handlePageChange('orders')}
-              >
-                View All
-                <ArrowRightIcon className="w-3 h-3 ml-1" />
-              </Button>
+
             </div>
             
-            <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-              {recentActivity.map((activity, index) => {
+            {/* Filter and Controls */}
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
+              <div className="relative">
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className="group flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 bg-transparent hover:bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12] rounded-md transition-all duration-200 min-w-[100px]"
+                >
+                  <FunnelIcon className="w-3.5 h-3.5" />
+                  <span className="flex-1 text-left">
+                    {filterOptions.find(opt => opt.value === activityFilter)?.label}
+                  </span>
+                  <ChevronDownIcon className={`w-3 h-3 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showFilterDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                    transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute top-full left-0 mt-1 w-44 bg-slate-800/95 backdrop-blur-xl border border-white/[0.08] rounded-md shadow-xl z-50 overflow-hidden"
+                  >
+                    <div className="py-1">
+                      {filterOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            setActivityFilter(option.value);
+                            setShowFilterDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors duration-150 hover:bg-white/[0.05] ${
+                            activityFilter === option.value 
+                              ? 'text-indigo-400 bg-indigo-500/[0.08]' 
+                              : 'text-slate-300 hover:text-white'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+              
+              <button
+                onClick={() => handlePageChange('orders')}
+                className="group flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-slate-400 hover:text-indigo-300 bg-gray-100/5 hover:bg-gray-200/10 border border-gray-300/20 hover:border-indigo-400/30 rounded-md transition-all duration-200 hover:shadow-sm max-h-8 w-fit"
+              >
+                <span>View All</span>
+                <ArrowRightIcon className="w-3 h-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+              {recentActivity
+                .filter(activity => activityFilter === 'all' || activity.type === activityFilter)
+                .map((activity, index) => {
                 const Icon = getActivityIcon(activity.type);
+                const emoji = getActivityEmoji(activity.type);
                 return (
                   <motion.div
                     key={activity.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
                     whileHover={{ 
-                      scale: 1.01, 
-                      x: 4,
+                      scale: 1.005,
+                      y: -2,
                       transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] }
                     }}
-                    className="group relative bg-gradient-to-r from-white/[0.03] to-white/[0.06] backdrop-blur-sm border border-white/[0.08] rounded-xl p-4 lg:p-5 hover:border-white/[0.15] transition-all duration-300 cursor-pointer overflow-hidden"
+                    className="group relative bg-gradient-to-r from-white/[0.02] to-white/[0.05] backdrop-blur-sm border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.12] hover:from-white/[0.04] hover:to-white/[0.08] transition-all duration-300 cursor-pointer overflow-hidden min-h-[80px] flex items-center"
                     style={{
-                      background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%)',
+                      background: 'linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.05) 100%)',
                       backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)'
+                      WebkitBackdropFilter: 'blur(12px)',
+                      boxShadow: '0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.02)'
                     }}
                   >
-                    {/* Hover glow effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/[0.02] to-purple-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    {/* Subtle hover glow */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/[0.01] to-purple-500/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
                     
-                    <div className="relative z-10 flex items-center justify-between">
-                   <div className="flex items-center space-x-5">
-                     <div className={`relative w-14 h-14 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center backdrop-blur-sm border shadow-lg ${
-                          activity.status === 'success' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                          activity.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                          'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                    <div className="relative z-10 flex items-center w-full gap-4">
+                      {/* Icon with emoji overlay */}
+                      <div className="relative flex-shrink-0">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center backdrop-blur-sm border shadow-sm transition-all duration-300 group-hover:scale-105 ${
+                          activity.status === 'success' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25 group-hover:bg-emerald-500/20' :
+                          activity.status === 'pending' ? 'bg-amber-500/15 text-amber-400 border-amber-500/25 group-hover:bg-amber-500/20' :
+                          'bg-rose-500/15 text-rose-400 border-rose-500/25 group-hover:bg-rose-500/20'
                         }`}>
-                          <Icon className="w-6 h-6 lg:w-7 lg:h-7" />
-                          {/* Status pulse effect */}
-                          <div className={`absolute inset-0 rounded-2xl animate-ping opacity-20 ${
-                            activity.status === 'success' ? 'bg-emerald-400' :
-                            activity.status === 'pending' ? 'bg-amber-400' :
-                            'bg-rose-400'
-                          }`} />
+                          <Icon className="w-5 h-5" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                       <p className="text-lg lg:text-xl font-semibold text-white group-hover:text-slate-100 transition-colors truncate">
-                         {activity.title}
-                       </p>
-                       <p className="text-base text-slate-400 font-medium mt-2 group-hover:text-slate-300 transition-colors truncate">
-                         {activity.description}
-                       </p>
-                     </div>
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-slate-800/90 rounded-full flex items-center justify-center text-xs border border-white/10">
+                          {emoji}
+                        </div>
                       </div>
-                      <div className="text-right flex flex-col items-end gap-3 flex-shrink-0">
-                     <div className={`px-4 py-2 rounded-full text-sm font-bold border backdrop-blur-sm ${
-                          activity.status === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                          activity.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                          'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                        }`}>
-                          {activity.status === 'success' ? '✓ Completed' :
-                           activity.status === 'pending' ? '⏳ Pending' : '⚠ Issue'}
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-white group-hover:text-slate-100 transition-colors truncate mb-1">
+                              {activity.title}
+                            </h4>
+                            <p className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors truncate leading-relaxed">
+                              {activity.description}
+                            </p>
+                          </div>
+                          
+                          {/* Right side info */}
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0 text-right">
+                            {activity.amount && (
+                              <span className="text-xs font-semibold text-white bg-white/5 px-2 py-1 rounded-md border border-white/10">
+                                {activity.amount}
+                              </span>
+                            )}
+                            <div className="flex items-center gap-1 text-xs text-slate-400">
+                              <ClockIcon className="w-3 h-3" />
+                              <span>{activity.time}</span>
+                            </div>
+                            <span className="text-xs text-slate-500 font-medium hidden sm:block">
+                              {activity.timestamp}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-base text-slate-400 font-medium">{activity.time}</span>
                       </div>
                     </div>
+                    
+                    {/* Status indicator */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${
+                      activity.status === 'success' ? 'bg-emerald-400' :
+                      activity.status === 'pending' ? 'bg-amber-400' :
+                      'bg-rose-400'
+                    }`} />
                   </motion.div>
                 );
               })}
+              
+              {/* Empty state */}
+              {recentActivity.filter(activity => activityFilter === 'all' || activity.type === activityFilter).length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mb-4">
+                    <BoltIcon className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-300 mb-2">No Activity Found</h3>
+                  <p className="text-sm text-slate-400 max-w-sm">
+                    No {filterOptions.find(opt => opt.value === activityFilter)?.label.toLowerCase()} found. Try a different filter or check back later.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>

@@ -16,12 +16,12 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
   const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileModalRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
   
   const {
     notifications,
     unreadCount,
-    markAsRead,
     markAllAsRead,
     clearAllNotifications,
     initializeMockData,
@@ -47,7 +47,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Close dropdown when clicking outside
+  // Close dropdown/modal when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -57,6 +57,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
         !bellRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
+      }
+      
+      if (
+        mobileModalRef.current &&
+        !mobileModalRef.current.contains(event.target as Node) &&
+        bellRef.current &&
+        !bellRef.current.contains(event.target as Node)
+      ) {
+        setIsMobileModalOpen(false);
       }
     };
 
@@ -110,7 +119,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
       <button
         ref={bellRef}
         onClick={handleBellClick}
-        className="relative p-2 text-gray-400 hover:text-white transition-colors"
+        className="relative p-2 text-gray-400 hover:text-white hover:bg-white/20 dark:hover:bg-gray-800/60 hover:backdrop-blur-lg hover:shadow-lg hover:border hover:border-white/30 dark:hover:border-gray-600/50 rounded-lg transition-all duration-200 transform hover:scale-105"
       >
         {unreadCount > 0 ? (
           <BellSolidIcon className="h-5 w-5" />
@@ -121,9 +130,11 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
         {/* Notification Badge */}
         {unreadCount > 0 && (
           <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold shadow-lg border-2 border-white dark:border-gray-800 animate-pulse"
           >
             {unreadCount > 9 ? '9+' : unreadCount}
           </motion.span>
@@ -139,15 +150,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden"
+            className="absolute right-0 mt-2 w-80 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-300/30 dark:border-gray-700/50 rounded-xl shadow-xl z-[9999] max-h-96 overflow-hidden"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-white font-semibold">Notifications</h3>
+            <div className="px-4 py-3 border-b border-gray-300/30 dark:border-gray-700/50 flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-white font-semibold">Notifications</h3>
               {notifications.length > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                 >
                   Mark all read
                 </button>
@@ -157,7 +168,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
             {/* Notifications List */}
             <div className="max-h-80 overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="px-4 py-8 text-center text-gray-400">
+                <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                   <BellIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No notifications yet</p>
                 </div>
@@ -167,10 +178,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
                     key={notification.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className={`px-4 py-3 border-b border-gray-700 last:border-b-0 cursor-pointer transition-colors ${
+                    className={`px-4 py-3 border-b border-gray-300/20 dark:border-gray-700/50 last:border-b-0 cursor-pointer transition-colors ${
                       notification.read 
-                        ? 'bg-gray-800 hover:bg-gray-750' 
-                        : 'bg-gray-750 hover:bg-gray-700'
+                        ? 'bg-transparent hover:bg-gray-200/30 dark:hover:bg-gray-700/30' 
+                        : 'bg-gray-100/20 dark:bg-gray-700/20 hover:bg-gray-200/40 dark:hover:bg-gray-700/40'
                     }`}
                     onClick={() => {
                       openNotificationModal(notification);
@@ -184,7 +195,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className={`text-sm font-medium ${
-                            notification.read ? 'text-gray-300' : 'text-white'
+                            notification.read ? 'text-gray-600 dark:text-gray-300' : 'text-gray-900 dark:text-white'
                           }`}>
                             {notification.title}
                           </p>
@@ -193,7 +204,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
                           </span>
                         </div>
                         <p className={`text-sm mt-1 ${
-                          notification.read ? 'text-gray-400' : 'text-gray-300'
+                          notification.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-300'
                         }`}>
                           {notification.body}
                         </p>
@@ -209,10 +220,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="px-4 py-3 border-t border-gray-700 bg-gray-750">
+              <div className="px-4 py-3 border-t border-gray-300/30 dark:border-gray-700/50 bg-gray-100/20 dark:bg-gray-800/20">
                 <button
                   onClick={handleClearAll}
-                  className="w-full text-sm text-red-400 hover:text-red-300 transition-colors"
+                  className="w-full text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
                 >
                   Clear All Notifications
                 </button>
@@ -223,10 +234,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '', onN
       </AnimatePresence>
 
       {/* Mobile Notification Modal */}
-      <MobileNotificationModal 
-        isOpen={isMobileModalOpen}
-        onClose={() => setIsMobileModalOpen(false)}
-      />
+      {isMobile && (
+        <MobileNotificationModal 
+          ref={mobileModalRef}
+          isOpen={isMobileModalOpen}
+          onClose={() => setIsMobileModalOpen(false)}
+        />
+      )}
 
       {/* Notification Detail Modal */}
       <NotificationModal

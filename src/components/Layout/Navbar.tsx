@@ -43,8 +43,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
       isScrolled 
-        ? 'bg-gray-900/95 backdrop-blur-lg shadow-lg border-b border-gray-700' 
-        : 'bg-gray-900/90 backdrop-blur-md border-b border-gray-800'
+        ? 'bg-gray-900/95 backdrop-blur-xl shadow-lg border-b border-gray-700' 
+        : 'bg-gray-900/90 backdrop-blur-lg border-b border-gray-800'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-18">
@@ -90,7 +90,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-3">
-            <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-200">
+            <button className="p-2 text-gray-400 hover:text-white hover:bg-white/20 dark:hover:bg-gray-800/60 hover:backdrop-blur-lg hover:shadow-lg hover:border hover:border-white/30 dark:hover:border-gray-600/50 rounded-lg transition-all duration-200 transform hover:scale-105">
               <Search className="h-5 w-5" />
             </button>
             
@@ -135,7 +135,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
             
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-200"
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/20 dark:hover:bg-gray-800/60 hover:backdrop-blur-lg hover:shadow-lg hover:border hover:border-white/30 dark:hover:border-gray-600/50 rounded-lg transition-all duration-200 transform hover:scale-105"
             >
               <div className="relative w-6 h-6">
                 <span className={`absolute inset-0 transition-all duration-300 ${
@@ -154,12 +154,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
         </div>
 
         {/* Mobile Menu */}
-        <div className={`lg:hidden absolute top-full left-0 right-0 bg-gray-900/98 backdrop-blur-lg border-b border-gray-700 shadow-2xl transition-all duration-300 ease-in-out ${
+        <div className={`lg:hidden absolute top-full left-0 right-0 bg-white/60 dark:bg-gray-900/85 backdrop-blur-2xl border border-gray-300/40 dark:border-gray-700/60 rounded-b-xl shadow-2xl z-[9999] transition-all duration-300 ease-in-out hover:bg-white/70 hover:dark:bg-gray-900/90 hover:backdrop-blur-3xl ${
           isMenuOpen 
             ? 'opacity-100 translate-y-0 visible' 
             : 'opacity-0 -translate-y-4 invisible'
         }`}>
-          <div className="px-4 py-6 space-y-1">
+          <div className="p-4 space-y-2">
             {/* Navigation Links */}
             <div className="space-y-1">
               {navigation.map((item, index) => (
@@ -171,8 +171,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                   }}
                   className={`block w-full text-left px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 transform ${
                     currentPage === item.key
-                      ? 'text-indigo-400 bg-indigo-400/10 border-l-4 border-indigo-400'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-800/50 hover:translate-x-1'
+                      ? 'text-indigo-400 bg-indigo-400/10 border-l-4 border-indigo-400 backdrop-blur-sm'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60 hover:backdrop-blur-lg hover:translate-x-1 hover:shadow-lg'
                   }`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
@@ -188,14 +188,14 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                   onNavigate('marketplace');
                   setIsMenuOpen(false);
                 }}
-                className="block w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
+                className="block w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:backdrop-blur-lg hover:shadow-xl"
               >
                 Explore Marketplace
               </button>
             </div>
             
             {/* Divider */}
-            <div className="border-t border-gray-700 pt-4 mt-4">
+            <div className="border-t border-gray-300/30 dark:border-gray-700/50 pt-4 mt-4">
               {isAuthenticated ? (
                 <div className="space-y-2">
                   <button 
@@ -204,7 +204,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                       onNavigate(currentRole === 'buyer' ? 'buyer-dashboard' : 'seller-dashboard');
                       setIsMenuOpen(false);
                     }}
-                    className="block w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105"
+                    className="block w-full bg-blue-600/90 hover:bg-blue-700/90 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105 hover:backdrop-blur-lg hover:shadow-lg"
                   >
                     Dashboard
                   </button>
@@ -213,7 +213,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                       onNavigate('wallet');
                       setIsMenuOpen(false);
                     }}
-                    className="block w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105"
+                    className="block w-full bg-gray-600/90 hover:bg-gray-700/90 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105 hover:backdrop-blur-lg hover:shadow-lg"
                   >
                     Wallet
                   </button>
@@ -222,7 +222,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                       onLogout();
                       setIsMenuOpen(false);
                     }}
-                    className="block w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105"
+                    className="block w-full bg-red-600/90 hover:bg-red-700/90 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105 hover:backdrop-blur-lg hover:shadow-lg"
                   >
                     Logout
                   </button>
@@ -234,7 +234,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                       onNavigate('auth');
                       setIsMenuOpen(false);
                     }}
-                    className="block w-full text-left px-4 py-3 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800/50 rounded-xl transition-all duration-200 transform hover:translate-x-1"
+                    className="block w-full text-left px-4 py-3 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-800/60 hover:backdrop-blur-lg rounded-xl transition-all duration-200 transform hover:translate-x-1 hover:shadow-lg"
                   >
                     Sign In
                   </button>
@@ -243,7 +243,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, isAuthenticate
                       onNavigate('auth');
                       setIsMenuOpen(false);
                     }}
-                    className="block w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
+                    className="block w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:backdrop-blur-lg hover:shadow-xl"
                   >
                     Get Started
                   </button>

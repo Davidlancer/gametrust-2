@@ -26,7 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       animate={{
         x: isDesktop ? 0 : (sidebarOpen ? 0 : '-100%')
       }}
-      className="fixed top-12 bottom-0 left-0 z-40 w-56 lg:w-60 bg-white/[0.02] backdrop-blur-xl border-r border-white/[0.08] lg:translate-x-0 lg:static lg:flex-shrink-0 flex flex-col"
+      className="fixed top-0 bottom-0 left-0 z-[60] w-56 lg:w-60 bg-white/[0.02] backdrop-blur-xl border-r border-white/[0.08] lg:translate-x-0 lg:static lg:flex-shrink-0 flex flex-col lg:top-12 lg:z-40"
     >
       {/* Mobile Close Button */}
       <div className="flex items-center justify-end h-12 px-4 lg:hidden">
