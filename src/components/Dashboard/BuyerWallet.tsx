@@ -1,32 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   WalletIcon,
   PlusIcon,
-  ArrowUpIcon,
   ArrowDownIcon,
   CreditCardIcon,
-  BanknotesIcon,
   ClockIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
-  CalendarIcon
+  FunnelIcon,
+  CalendarDaysIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
 import Spinner from '../UI/Spinner';
 import { useToast } from '../UI/ToastProvider';
-import { notificationService } from '../../services/notificationService';
 import { useEscrow } from '../../hooks/useEscrow';
 import EscrowStatusCard from '../UI/EscrowStatusCard';
+import TransactionDetailsModal from '../UI/TransactionDetailsModal';
 
 interface Transaction {
   id: string;
   type: 'escrow_payment' | 'refund' | 'deposit' | 'referral_bonus';
   description: string;
   amount: number;
-  status: 'completed' | 'pending' | 'failed';
+  status: 'completed' | 'pending' | 'failed' | 'disputed';
   date: string;
   orderId?: string;
 }
@@ -88,43 +86,19 @@ const mockTransactions: Transaction[] = [
 const getTransactionIcon = (type: string) => {
   switch (type) {
     case 'escrow_payment':
-      return ArrowUpIcon;
-    case 'refund':
-      return ArrowDownIcon;
+      return '💳';
     case 'deposit':
-      return PlusIcon;
+      return '💰';
+    case 'refund':
+      return '↩️';
     case 'referral_bonus':
-      return BanknotesIcon;
+      return '🎁';
     default:
-      return WalletIcon;
+      return '💳';
   }
 };
 
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return CheckCircleIcon;
-    case 'pending':
-      return ClockIcon;
-    case 'failed':
-      return XCircleIcon;
-    default:
-      return ClockIcon;
-  }
-};
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return 'text-green-400';
-    case 'pending':
-      return 'text-yellow-400';
-    case 'failed':
-      return 'text-red-400';
-    default:
-      return 'text-gray-400';
-  }
-};
 
 // Error Boundary Component
 class BuyerWalletErrorBoundary extends React.Component<
@@ -149,12 +123,17 @@ class BuyerWalletErrorBoundary extends React.Component<
       return (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <ExclamationTriangleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-2">Something went wrong</h3>
-            <p className="text-gray-400 mb-4">We're having trouble loading your wallet.</p>
+            <ExclamationTriangleIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">Something went wrong</h3>
+            <p className="text-gray-400 mb-4">
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </p>
             <Button
               variant="primary"
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                this.setState({ hasError: false, error: undefined });
+                window.location.reload();
+              }}
             >
               Reload Page
             </Button>
@@ -167,122 +146,97 @@ class BuyerWalletErrorBoundary extends React.Component<
   }
 }
 
-// Main BuyerWallet Section Component
 const BuyerWalletSection: React.FC = () => {
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [showFundModal, setShowFundModal] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
-  const [filter, setFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
-  
-  // Safe toast usage with fallback
-  let toastHandlers = { showSuccess: () => {}, showError: () => {} };
-  try {
-    const toast = useToast();
-    toastHandlers = toast;
-  } catch (toastError) {
-    console.warn('Toast provider not available, using fallback handlers');
-  }
-  const { showSuccess, showError } = toastHandlers;
-  
-  // Safe escrow hook usage with error handling
-  let escrowData = null;
-  let updateEscrowStatusFn = () => {};
-  let escrowError = null;
-  try {
-    const { escrow, updateEscrowStatus, error } = useEscrow();
-    escrowData = escrow;
-    updateEscrowStatusFn = updateEscrowStatus;
-    escrowError = error;
-  } catch (hookError) {
-    console.error('useEscrow hook error:', hookError);
-    escrowError = 'Failed to load escrow data';
-  }
-  
-  // Safe fallbacks for wallet data
-  const currentBalance = 100000;
-  const pendingBalance = escrowData?.amount || 70000; // Amount in escrow
-  const escrowAmount = escrowData?.amount || 0;
-  const escrowStatus = escrowData?.status || null;
-  
-  // Debug logging
-  console.log('BuyerWallet Load:', { 
-    balance: currentBalance, 
-    pendingBalance, 
-    escrow: escrowData,
-    escrowError,
-    walletError 
-  });
-  
-  // Initialize component with loading state and error handling
-  useEffect(() => {
-    const loadWalletData = async () => {
-      try {
-        const timer = setTimeout(() => {
-          setIsLoading(false);
-          if (escrowError) {
-            setWalletError(escrowError);
-          }
-        }, 1000);
-        return () => clearTimeout(timer);
-      } catch (error) {
-        console.error('BuyerWallet data loading error:', error);
-        setWalletError('Failed to load wallet data');
-        setIsLoading(false);
-      }
-    };
-    
-    loadWalletData();
-  }, [escrowError]);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
 
+  const { showToast } = useToast();
+
+  // Use escrow hook for buyer functionality
+  const escrowHookResult = useEscrow();
+  const {
+    escrow
+  } = escrowHookResult || {
+    escrow: null
+  };
+
+  const escrowAmount = escrow?.amount || 0;
+  const escrowStatus = escrow?.status || 'none';
+
+  // Mock wallet data - in real app, this would come from an API
+  const currentBalance = 125000;
+  const pendingBalance = escrowAmount || 70000;
+
+  // Filter transactions
   const filteredTransactions = mockTransactions.filter(transaction => {
-    try {
-      const matchesFilter = filter === 'all' || transaction.type === filter;
-      const matchesSearch = (transaction?.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesFilter && matchesSearch;
-    } catch (error) {
-      console.error('Error filtering transactions:', error);
-      return true; // Show transaction if filtering fails
+    let matchesFilter = false;
+    
+    if (filter === 'all') {
+      matchesFilter = true;
+    } else if (filter === 'deposit') {
+      matchesFilter = transaction.amount > 0;
+    } else if (filter === 'escrow_payment') {
+      matchesFilter = transaction.amount < 0;
+    } else if (filter === 'pending') {
+      matchesFilter = transaction.status === 'pending';
+    } else {
+      matchesFilter = transaction.type === filter;
     }
+    
+    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         transaction.orderId?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesFilter && matchesSearch;
   });
 
-  const handleFundWallet = () => {
+  const handleFundWallet = async () => {
+    if (!fundAmount || parseFloat(fundAmount) <= 0) {
+      showToast({ type: 'error', title: 'Invalid Amount', message: 'Please enter a valid amount' });
+      return;
+    }
+
     try {
-      if (!fundAmount || parseFloat(fundAmount) <= 0) {
-        showError('Invalid Amount', 'Please enter a valid amount to fund your wallet.');
-        return;
-      }
+      setIsLoading(true);
       
       const amount = parseFloat(fundAmount);
-      const methodName = paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 
-                        paymentMethod === 'card' ? 'Debit/Credit Card' : 'USSD';
+      // Payment method processing would go here
       
-      // Use notification service for both notification and toast
-      notificationService.walletFunded(
-        `₦${amount.toLocaleString()}`,
-        {
-          toastTitle: '💸 Wallet Funded',
-          toastMessage: `You just added ₦${amount.toLocaleString()} to your balance.`
-        }
-      );
+      showToast({ type: 'success', title: 'Wallet Funded', message: `Successfully added ₦${amount.toLocaleString()} to your wallet` });
       
       setShowFundModal(false);
       setFundAmount('');
+      setPaymentMethod('bank_transfer');
     } catch (error) {
-      console.error('Error funding wallet:', error);
-      showError('Error', 'Error funding wallet. Please try again.');
+      console.error('Fund wallet error:', error);
+      showToast({ type: 'error', title: 'Funding Failed', message: 'Failed to fund wallet. Please try again.' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleTransactionClick = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setShowTransactionModal(true);
+  };
+
+  const handleCloseTransactionModal = () => {
+    setShowTransactionModal(false);
+    setSelectedTransaction(null);
+  };
+
   // Show error state
-  if (walletError && !isLoading) {
+  if (walletError) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <ExclamationTriangleIcon className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">Wallet Error</h3>
+          <ExclamationTriangleIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-white mb-2">Wallet Error</h3>
           <p className="text-gray-400 mb-4">{walletError}</p>
           <Button
             variant="primary"
@@ -312,9 +266,9 @@ const BuyerWalletSection: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="h-full flex flex-col space-y-6 overflow-hidden">
       {/* Escrow Status Banner */}
-      {escrowData && escrowStatus === 'in_escrow' && (
+      {escrow && escrowStatus === 'in_escrow' && (
         <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -329,168 +283,212 @@ const BuyerWalletSection: React.FC = () => {
         </div>
       )}
 
-      {/* Escrow Actions for Buyer */}
-      {escrowData && escrowStatus === 'in_escrow' && (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-          <h3 className="text-white font-semibold mb-3">Escrow Actions</h3>
-          <p className="text-gray-400 text-sm mb-4">
-            Once you receive your account details and verify everything is correct, you can release the payment to the seller.
-          </p>
-          <div className="flex gap-3">
-            <Button
-              variant="primary"
-              onClick={() => {
-                try {
-                  updateEscrowStatusFn('released');
-                  showSuccess('Success', 'Payment released to seller successfully!');
-                } catch (error) {
-                  console.error('Error confirming delivery:', error);
-                  showError('Error', 'Failed to confirm delivery. Please try again.');
-                }
-              }}
-              className="bg-green-600 hover:bg-green-700"
+      {/* Main Wallet Balance Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 lg:p-8 text-white relative overflow-hidden"
+      >
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-black/10 backdrop-blur-sm" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
+        
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="text-center sm:text-left">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">₦{currentBalance.toLocaleString()}</h1>
+              <p className="text-white/80 text-sm sm:text-base">Available Balance</p>
+            </div>
+            
+            {pendingBalance > 0 && (
+              <div className="text-center sm:text-right">
+                <p className="text-lg sm:text-xl font-semibold text-yellow-300">₦{pendingBalance.toLocaleString()}</p>
+                <p className="text-white/70 text-xs sm:text-sm">Pending in Escrow</p>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowFundModal(true)}
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-xl text-white text-sm font-medium transition-all duration-200"
             >
-              <CheckCircleIcon className="w-4 h-4 mr-2" />
-              Confirm Delivery
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                try {
-                  updateEscrowStatusFn('disputed');
-                  showError('Dispute Raised', 'Dispute raised. Our team will review this case.');
-                } catch (error) {
-                  console.error('Error raising dispute:', error);
-                  showError('Error', 'Failed to raise dispute. Please try again.');
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              <PlusIcon className="w-4 h-4" />
+              <span>Add Funds</span>
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-xl text-white text-sm font-medium transition-all duration-200"
             >
-              <ExclamationTriangleIcon className="w-4 h-4 mr-2" />
-              Raise Dispute
-            </Button>
+              <ArrowDownIcon className="w-4 h-4" />
+              <span>Withdraw</span>
+            </motion.button>
           </div>
         </div>
-      )}
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white">Wallet</h1>
-          <p className="text-gray-400 mt-1">Manage your funds and transaction history</p>
-        </div>
-        <Button
-          variant="primary"
-          onClick={() => setShowFundModal(true)}
-          className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
-        >
-          <PlusIcon className="w-5 h-5 mr-2" />
-          Fund Wallet
-        </Button>
-      </div>
-
-      {/* Balance Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-xl p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <WalletIcon className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <h3 className="text-2xl lg:text-3xl font-bold text-white mb-1">
-            ₦{currentBalance.toLocaleString()}
-          </h3>
-          <p className="text-sm text-gray-300">Available Balance</p>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center">
-              <ClockIcon className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <h3 className="text-2xl lg:text-3xl font-bold text-white mb-1">
-            ₦{pendingBalance.toLocaleString()}
-          </h3>
-          <p className="text-sm text-gray-300">In Escrow</p>
-        </motion.div>
-
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-              <BanknotesIcon className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <h3 className="text-2xl lg:text-3xl font-bold text-white mb-1">
-            ₦{(currentBalance + pendingBalance).toLocaleString()}
-          </h3>
-          <p className="text-sm text-gray-300">Total Balance</p>
-        </motion.div>
-      </div>
+      </motion.div>
 
       {/* Transaction History */}
-      <div className="flex-1 bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 flex flex-col">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-          <h2 className="text-xl font-semibold text-white">Transaction History</h2>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
-            <option value="all">All Transactions</option>
-            <option value="deposit">Deposits</option>
-            <option value="escrow_payment">Escrow Payments</option>
-            <option value="refund">Refunds</option>
-            <option value="referral_bonus">Referral Bonuses</option>
-          </select>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-4 lg:p-6 flex flex-col flex-1 min-h-0 overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-white mb-1">Recent Transactions</h2>
+            <p className="text-sm text-gray-400">Track your wallet activity</p>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {/* Search Bar */}
-          <div className="mb-4">
-            <div className="relative">
-              <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search transactions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+        {/* Professional Filter Bar */}
+        <div className="space-y-3 mb-6">
+          {/* Primary Filters - Mobile Stacked, Desktop Horizontal */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Transaction Type Filter Tabs */}
+            <div className="flex-1 max-w-full md:max-w-lg">
+              <div className="flex items-center bg-gray-800/40 rounded-lg p-0.5 border border-gray-700/30 overflow-hidden">
+                {[
+                  { value: 'all', label: 'All', count: mockTransactions.length },
+                  { value: 'deposit', label: 'Credit', count: mockTransactions.filter(t => t.amount > 0).length },
+                  { value: 'escrow_payment', label: 'Debit', count: mockTransactions.filter(t => t.amount < 0).length },
+                  { value: 'pending', label: 'Pending', count: mockTransactions.filter(t => t.status === 'pending').length }
+                ].map((tab) => (
+                  <motion.button
+                    key={tab.value}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setFilter(tab.value)}
+                    className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all duration-200 relative overflow-hidden whitespace-nowrap min-w-fit h-auto ${
+                      filter === tab.value
+                        ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-sm'
+                        : 'text-gray-300 hover:text-white hover:bg-gray-700/40'
+                    }`}
+                  >
+                    <span className="relative z-10 flex items-center justify-center gap-1">
+                      <span>{tab.label}</span>
+                      {tab.count > 0 && (
+                        <span className={`px-1 py-0.5 text-[9px] font-semibold rounded-full ${
+                          filter === tab.value
+                            ? 'bg-white/20 text-white'
+                            : 'bg-gray-600/50 text-gray-300'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      )}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            {/* Additional Filters - Desktop */}
+            <div className="hidden md:flex items-center gap-2">
+              {/* Date Range Filter */}
+              <div className="relative min-w-[120px]">
+                <select className="appearance-none bg-gray-800/40 border border-gray-700/30 rounded-md px-3 py-1.5 pr-8 text-xs text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 cursor-pointer hover:bg-gray-700/40 h-auto">
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                </select>
+                <CalendarDaysIcon className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+              </div>
+
+              {/* Amount Range Filter */}
+              <div className="relative min-w-[120px]">
+                <select className="appearance-none bg-gray-800/40 border border-gray-700/30 rounded-md px-3 py-1.5 pr-8 text-xs text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 cursor-pointer hover:bg-gray-700/40 h-auto">
+                  <option value="all">Any Amount</option>
+                  <option value="small">Under ₦10K</option>
+                  <option value="medium">₦10K - ₦100K</option>
+                  <option value="large">Over ₦100K</option>
+                </select>
+                <FunnelIcon className="w-3.5 h-3.5 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+              </div>
+
+              {/* Clear Filters Button */}
+              {(filter !== 'all' || searchTerm) && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setFilter('all');
+                    setSearchTerm('');
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-gray-700/40 hover:bg-gray-600/40 border border-gray-600/30 rounded-md text-xs text-gray-300 hover:text-white transition-all duration-200 h-auto"
+                >
+                  <XMarkIcon className="w-3 h-3" />
+                  <span>Reset</span>
+                </motion.button>
+              )}
             </div>
           </div>
 
-          {/* Escrow Transaction Display */}
-          {escrowData && (
-            <div className="mb-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-white font-medium">Escrow Transaction</h4>
-                <EscrowStatusCard status={escrowStatus} size="sm" />
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-400">Account:</p>
-                  <p className="text-white">{escrowData.accountId || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400">Amount:</p>
-                  <p className="text-white font-semibold">₦{escrowAmount.toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="mt-2">
-                <p className="text-gray-400 text-xs">Created: {escrowData.createdAt ? new Date(escrowData.createdAt).toLocaleDateString() : 'N/A'}</p>
-              </div>
-            </div>
-          )}
+          {/* Search Bar - Full Width */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-800/40 border border-gray-700/30 rounded-md text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 hover:bg-gray-700/40 h-auto"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors duration-200"
+              >
+                <XMarkIcon className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
+          {/* Mobile Additional Filters */}
+          <div className="flex md:hidden flex-wrap gap-2">
+            {/* Date Filter - Mobile */}
+            <select className="appearance-none bg-gray-800/40 border border-gray-700/30 rounded-md px-3 py-1.5 pr-8 text-xs text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 cursor-pointer min-w-[100px] h-auto">
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+            </select>
+
+            {/* Amount Filter - Mobile */}
+            <select className="appearance-none bg-gray-800/40 border border-gray-700/30 rounded-md px-3 py-1.5 pr-8 text-xs text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 cursor-pointer min-w-[100px] h-auto">
+              <option value="all">Any Amount</option>
+              <option value="small">Under ₦10K</option>
+              <option value="medium">₦10K - ₦100K</option>
+              <option value="large">Over ₦100K</option>
+            </select>
+
+            {/* Clear Filters - Mobile */}
+            {(filter !== 'all' || searchTerm) && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setFilter('all');
+                  setSearchTerm('');
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 bg-gray-700/40 hover:bg-gray-600/40 border border-gray-600/30 rounded-md text-xs text-gray-300 hover:text-white transition-all duration-200 whitespace-nowrap h-auto"
+              >
+                <XMarkIcon className="w-3 h-3" />
+                <span>Reset</span>
+              </motion.button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-x-hidden overflow-y-auto max-h-[calc(100vh-400px)] scrollbar-none">
           {filteredTransactions.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
@@ -502,52 +500,100 @@ const BuyerWalletSection: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredTransactions.map((transaction) => {
+            <div className="space-y-2">
+              {filteredTransactions.map((transaction, index) => {
                 const Icon = getTransactionIcon(transaction.type);
-                const StatusIcon = getStatusIcon(transaction.status);
                 const isNegative = transaction.amount < 0;
                 
                 return (
                   <motion.div
                     key={transaction.id}
-                    whileHover={{ scale: 1.01 }}
-                    className="flex items-center space-x-4 p-4 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-all duration-200"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => handleTransactionClick(transaction)}
+                    className="group relative bg-gray-800/20 hover:bg-gray-700/30 border border-gray-700/30 hover:border-gray-600/50 rounded-xl p-3 sm:p-4 transition-all duration-200 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      isNegative ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
-                    }`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white truncate">{transaction.description}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <StatusIcon className={`w-4 h-4 ${getStatusColor(transaction.status)}`} />
-                        <span className={`text-sm ${getStatusColor(transaction.status)}`}>
-                          {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                        </span>
-                        {transaction.orderId && (
-                          <span className="text-sm text-gray-500">• {transaction.orderId}</span>
-                        )}
+                    <div className="flex items-center justify-between">
+                      {/* Left: Icon + Details */}
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        {/* Transaction Type Icon */}
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-700/50 rounded-xl flex items-center justify-center text-lg sm:text-xl">
+                            {Icon}
+                          </div>
+                        </div>
+                        
+                        {/* Transaction Details */}
+                         <div className="flex-1 min-w-0">
+                           {/* Title */}
+                           <h4 
+                             className="font-semibold text-white text-sm sm:text-base leading-snug line-clamp-1 md:line-clamp-2" 
+                             title={transaction.description}
+                           >
+                             {transaction.description}
+                           </h4>
+                         </div>
+                        
+                        {/* Subtitle - Mobile Stacked */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 text-xs sm:text-sm text-gray-400 space-y-1 sm:space-y-0">
+                          {/* Status + Date Row */}
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full font-medium capitalize text-[10px] sm:text-xs shrink-0 ${
+                              transaction.status === 'completed' ? 'bg-green-500/15 text-green-400' :
+                              transaction.status === 'pending' ? 'bg-yellow-500/15 text-yellow-400' :
+                              transaction.status === 'failed' ? 'bg-red-500/15 text-red-400' :
+                              'bg-orange-500/15 text-orange-400'
+                            }`}>
+                              {transaction.status}
+                            </span>
+                            
+                            <span className="hidden sm:inline text-gray-500">•</span>
+                            <span className="font-medium truncate text-[11px] sm:text-xs">{transaction.date}</span>
+                          </div>
+                          
+                          {/* Order ID - Second Row on Mobile */}
+                          {transaction.orderId && (
+                            <div className="flex items-center space-x-2 sm:space-x-0">
+                              <span className="hidden sm:inline text-gray-500">•</span>
+                              <span className="text-gray-400 font-mono text-[9px] sm:text-[10px] bg-gray-700/30 px-1 py-0.5 sm:px-1.5 rounded shrink-0">
+                                {transaction.orderId}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Right: Amount */}
+                      <div className="text-right shrink-0 ml-2">
+                        <p className={`font-bold text-sm sm:text-base lg:text-lg leading-tight ${
+                          isNegative ? 'text-red-400' : 'text-green-400'
+                        }`}>
+                          {isNegative ? '-' : '+'}₦{Math.abs(transaction.amount).toLocaleString()}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5">
+                          {isNegative ? 'Sent' : 'Received'}
+                        </p>
                       </div>
                     </div>
                     
-                    <div className="text-right">
-                      <p className={`font-semibold ${
-                        isNegative ? 'text-red-400' : 'text-green-400'
-                      }`}>
-                        {isNegative ? '-' : '+'}₦{Math.abs(transaction.amount).toLocaleString()}
-                      </p>
-                      <p className="text-sm text-gray-500">{transaction.date}</p>
-                    </div>
+                    {/* Status Indicator - Left Border */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-0.5 sm:w-1 rounded-l-xl ${
+                      transaction.status === 'completed' ? 'bg-green-400' :
+                      transaction.status === 'pending' ? 'bg-yellow-400' :
+                      transaction.status === 'failed' ? 'bg-red-400' :
+                      'bg-orange-400'
+                    }`} />
+                    
+                    {/* Subtle Hover Effect */}
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500/3 to-purple-500/3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none" />
                   </motion.div>
                 );
               })}
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Fund Wallet Modal */}
       {showFundModal && (
@@ -629,6 +675,13 @@ const BuyerWalletSection: React.FC = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Transaction Details Modal */}
+      <TransactionDetailsModal
+        isOpen={showTransactionModal}
+        onClose={handleCloseTransactionModal}
+        transaction={selectedTransaction}
+      />
     </div>
   );
 };

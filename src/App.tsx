@@ -14,15 +14,31 @@ import Onboarding from './pages/Onboarding';
 import ReferralProgram from './pages/ReferralProgram';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
+import HelpCenter from './pages/Support/HelpCenter';
+import SafetyGuidelines from './pages/Support/SafetyGuidelines';
+import ContactUs from './pages/Support/ContactUs';
+import TermsOfService from './pages/Support/TermsOfService';
+import PlatformMarketplace from './pages/Platform/Marketplace';
+import StartSelling from './pages/Platform/StartSelling';
+import HowItWorks from './pages/Platform/HowItWorks';
+import Verification from './pages/Platform/Verification';
+import Faq from './pages/Faq';
+import Pricing from './pages/Pricing';
+import BuyerProtection from './pages/BuyerProtection';
+import Community from './pages/Community';
 import { AlertTriangle } from 'lucide-react';
 import ToastProvider from './components/UI/ToastProvider';
 import RoleSwitcher from './components/UI/RoleSwitcher';
 import NotificationDevTools, { DevModeToggle } from './components/UI/NotificationDevTools';
 import NotificationServiceProvider from './components/UI/NotificationServiceProvider';
 import { ActivityLogProvider } from './context/ActivityLogContext';
+import PageTransition from './components/UI/PageTransition';
+import LoadingBar from './components/UI/LoadingBar';
+import LoadingScreen from './components/UI/LoadingScreen';
+import { LoadingProvider } from './context/LoadingContext';
 import './utils/testRoleSwitcher'; // Load test utilities
 
-type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'seller-dashboard' | 'buyer-dashboard' | 'onboarding' | 'referral-program' | 'admin-dashboard' | 'admin-login';
+type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'seller-dashboard' | 'buyer-dashboard' | 'onboarding' | 'referral-program' | 'admin-dashboard' | 'admin-login' | 'support/help-center' | 'support/safety-guidelines' | 'support/contact-us' | 'support/terms-of-service' | 'platform/marketplace' | 'platform/start-selling' | 'platform/how-it-works' | 'platform/verification' | 'faq' | 'pricing' | 'buyer-protection' | 'community';
 
 interface OnboardingData {
   roles: string[];
@@ -39,6 +55,8 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [, setUserType] = useState<string>('buyer');
   const [devMode] = useState<boolean>(true); // Testing mode toggle
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
 
   // Initialize mock user for escrow functionality
   useEffect(() => {
@@ -54,6 +72,9 @@ function App() {
   }, []);
 
   const handleNavigate = (page: string, id?: string) => {
+    // Show loading during navigation
+    setIsLoading(true);
+    
     // Parse URL with query parameters
     let targetPage = page;
     let queryString = '';
@@ -75,18 +96,24 @@ function App() {
     if (targetPage === 'wallet') {
       const currentRole = localStorage.getItem('userRole') || 'buyer';
       if (currentRole === 'seller') {
-        setCurrentPage('seller-dashboard');
-        // Set wallet as the active page in seller dashboard
         setTimeout(() => {
-          const event = new CustomEvent('navigateToWallet');
-          window.dispatchEvent(event);
+          setCurrentPage('seller-dashboard');
+          setIsLoading(false);
+          // Set wallet as the active page in seller dashboard
+          setTimeout(() => {
+            const event = new CustomEvent('navigateToWallet');
+            window.dispatchEvent(event);
+          }, 100);
         }, 100);
       } else {
-        setCurrentPage('buyer-dashboard');
-        // Set wallet as the active page in buyer dashboard
         setTimeout(() => {
-          const event = new CustomEvent('navigateToWallet');
-          window.dispatchEvent(event);
+          setCurrentPage('buyer-dashboard');
+          setIsLoading(false);
+          // Set wallet as the active page in buyer dashboard
+          setTimeout(() => {
+            const event = new CustomEvent('navigateToWallet');
+            window.dispatchEvent(event);
+          }, 100);
         }, 100);
       }
       return;
@@ -96,7 +123,11 @@ function App() {
     const newUrl = queryString ? `/${targetPage}?${queryString}` : `/${targetPage}`;
     window.history.pushState({}, '', newUrl);
     
-    setCurrentPage(targetPage as Page);
+    // Simulate brief loading for smooth transition
+    setTimeout(() => {
+      setCurrentPage(targetPage as Page);
+      setIsLoading(false);
+    }, 100);
   };
 
   const handleLogout = () => {
@@ -155,23 +186,37 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
   // Check authentication and onboarding status on app load
   useEffect(() => {
-    const mockUser = localStorage.getItem('mockUser');
-    if (mockUser) {
-      const userData = JSON.parse(mockUser);
-      if (userData.isAuthenticated) {
-        setIsAuthenticated(true);
-        setUserType(userData.userType || 'buyer');
+    // Simulate initial app loading with authentication check
+    const initializeApp = async () => {
+      const mockUser = localStorage.getItem('mockUser');
+      if (mockUser) {
+        const userData = JSON.parse(mockUser);
+        if (userData.isAuthenticated) {
+          setIsAuthenticated(true);
+          setUserType(userData.userType || 'buyer');
+        }
       }
-    }
+      
+      const onboarded = localStorage.getItem('onboardingComplete');
+      const storedData = localStorage.getItem('onboardingData');
+      if (onboarded === 'true' && storedData) {
+        setUserOnboarded(true);
+        setOnboardingData(JSON.parse(storedData));
+      }
+      
+      // Simulate loading time for smooth UX
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setIsInitialLoading(false);
+    };
     
-    const onboarded = localStorage.getItem('onboardingComplete');
-    const storedData = localStorage.getItem('onboardingData');
-    if (onboarded === 'true' && storedData) {
-      setUserOnboarded(true);
-      setOnboardingData(JSON.parse(storedData));
-    }
+    initializeApp();
   }, []);
 
   // Update user type when authentication state changes
@@ -224,6 +269,30 @@ function App() {
       }
       case 'admin-login':
         return <AdminLogin onNavigate={handleNavigate} />;
+      case 'support/help-center':
+        return <HelpCenter onNavigate={handleNavigate} />;
+      case 'support/safety-guidelines':
+        return <SafetyGuidelines onNavigate={handleNavigate} />;
+      case 'support/contact-us':
+        return <ContactUs onNavigate={handleNavigate} />;
+      case 'support/terms-of-service':
+        return <TermsOfService onNavigate={handleNavigate} />;
+      case 'platform/marketplace':
+        return <PlatformMarketplace onNavigate={handleNavigate} />;
+      case 'platform/start-selling':
+        return <StartSelling onNavigate={handleNavigate} />;
+      case 'platform/how-it-works':
+        return <HowItWorks onNavigate={handleNavigate} />;
+      case 'platform/verification':
+        return <Verification onNavigate={handleNavigate} />;
+      case 'faq':
+        return <Faq onNavigate={handleNavigate} />;
+      case 'pricing':
+        return <Pricing onNavigate={handleNavigate} />;
+      case 'buyer-protection':
+        return <BuyerProtection onNavigate={handleNavigate} />;
+      case 'community':
+        return <Community onNavigate={handleNavigate} />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }
@@ -231,7 +300,7 @@ function App() {
 
   // Redirect to auth if not authenticated (except for public pages)
   useEffect(() => {
-    const publicPages = ['home', 'marketplace', 'platforms', 'auth'];
+    const publicPages = ['home', 'marketplace', 'platforms', 'auth', 'support/help-center', 'support/safety-guidelines', 'support/contact-us', 'support/terms-of-service', 'platform/marketplace', 'platform/start-selling', 'platform/how-it-works', 'platform/verification', 'faq', 'pricing', 'buyer-protection', 'community'];
     if (!isAuthenticated && !publicPages.includes(currentPage)) {
       setCurrentPage('auth');
     }
@@ -257,51 +326,68 @@ function App() {
     );
   }
 
+  // Show loading screen during initial app loading
+  if (isInitialLoading) {
+    return <LoadingScreen message="Initializing GameTrust..." />;
+  }
+
   return (
+    <LoadingProvider>
     <ActivityLogProvider>
       <ToastProvider>
         <NotificationServiceProvider>
-        <div className="min-h-screen bg-gray-900">
-          {/* Testing Mode Banner */}
-          {devMode && (
-            <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-600 text-black px-4 py-2">
-              <div className="flex items-center justify-center space-x-2 text-sm font-medium">
-                <AlertTriangle className="h-4 w-4" />
-                <span>🧪 Testing Mode Active - Frontend Only Demo</span>
+        <div className="min-h-screen bg-gray-900 text-white overflow-x-hidden">
+          {isInitialLoading ? (
+            <LoadingScreen message="Initializing GameTrust..." />
+          ) : (
+            <>
+              <LoadingScreen />
+              {/* Testing Mode Banner */}
+              {devMode && (
+                <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-600 text-black px-4 py-2">
+                  <div className="flex items-center justify-center space-x-2 text-sm font-medium">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>🧪 Testing Mode Active - Frontend Only Demo</span>
+                  </div>
+                </div>
+              )}
+              
+              <div className={`${devMode ? 'pt-10' : ''} w-full overflow-x-hidden`}>
+                {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
+                  <Navbar 
+                    currentPage={currentPage} 
+                    onNavigate={handleNavigate} 
+                    isAuthenticated={isAuthenticated}
+                    onLogout={handleLogout}
+                  />
+                )}
+                <LoadingBar isLoading={isLoading} />
+                <main className={currentPage === 'admin-dashboard' || currentPage === 'admin-login' ? '' : 'pt-16'}>
+                  <PageTransition pageKey={currentPage}>
+                    {renderPage()}
+                  </PageTransition>
+                </main>
+                {isAuthenticated && currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
+                  <RoleSwitcher 
+                    onNavigate={handleNavigate}
+                    onLogout={handleLogout}
+                    currentPage={currentPage}
+                    mobileOnly={true}
+                  />
+                )}
+                {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && <Footer onNavigate={handleNavigate} />}
               </div>
-            </div>
+              
+              {/* Notification Dev Tools */}
+              <NotificationDevTools />
+              <DevModeToggle />
+            </>
           )}
-          
-          <div className={devMode ? 'pt-10' : ''}>
-            {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
-              <Navbar 
-                currentPage={currentPage} 
-                onNavigate={handleNavigate} 
-                isAuthenticated={isAuthenticated}
-                onLogout={handleLogout}
-              />
-            )}
-            <main className={currentPage === 'admin-dashboard' || currentPage === 'admin-login' ? '' : 'pt-16'}>
-              {renderPage()}
-            </main>
-            {isAuthenticated && currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && (
-              <RoleSwitcher 
-                onNavigate={handleNavigate}
-                onLogout={handleLogout}
-                currentPage={currentPage}
-                mobileOnly={true}
-              />
-            )}
-            {currentPage !== 'onboarding' && currentPage !== 'admin-dashboard' && currentPage !== 'admin-login' && <Footer />}
-          </div>
-          
-          {/* Notification Dev Tools */}
-          <NotificationDevTools />
-          <DevModeToggle />
         </div>
         </NotificationServiceProvider>
       </ToastProvider>
     </ActivityLogProvider>
+    </LoadingProvider>
   );
  }
 

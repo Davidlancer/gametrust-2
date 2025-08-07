@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRightIcon, ChevronLeftIcon, ShieldCheckIcon, CreditCardIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { ChevronRight, ChevronLeft, User, Gamepad2, CheckCircle, Shield } from 'lucide-react';
 import Button from '../components/UI/Button';
 import Card from '../components/UI/Card';
 import Confetti from '../components/UI/Confetti';
@@ -23,7 +23,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
   const [customGame, setCustomGame] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
 
-  const totalSteps = 5;
+  const totalSteps = 3;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   const games = [
@@ -37,37 +37,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
     'Valorant'
   ];
 
-  const roles = [
-    { id: 'buyer', label: 'I want to buy gaming accounts', icon: '🛒' },
-    { id: 'seller', label: 'I want to sell my gaming accounts', icon: '💰' },
-    { id: 'explorer', label: "I'm just exploring", icon: '🔍' }
-  ];
-
-  const escrowSteps = [
-    {
-      title: 'Buyer Pays GameTrust',
-      description: 'Your payment is held securely in escrow',
-      icon: CreditCardIcon,
-      color: 'text-blue-400'
-    },
-    {
-      title: 'Seller Delivers Account',
-      description: 'Account credentials are provided to buyer',
-      icon: ShieldCheckIcon,
-      color: 'text-yellow-400'
-    },
-    {
-      title: 'Payment Released',
-      description: 'After confirmation, seller receives payment',
-      icon: CheckCircleIcon,
-      color: 'text-green-400'
-    }
-  ];
-
   const handleRoleToggle = (roleId: string) => {
     setSelectedRoles(prev => 
       prev.includes(roleId) 
-        ? prev.filter(r => r !== roleId)
+        ? prev.filter(id => id !== roleId)
         : [...prev, roleId]
     );
   };
@@ -130,8 +103,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
 
   const canProceed = () => {
     switch (currentStep) {
-      case 1: return selectedRoles.length > 0;
-      case 2: return selectedGames.length > 0;
+      case 0: return selectedRoles.length > 0;
+      case 1: return selectedGames.length > 0;
       default: return true;
     }
   };
@@ -154,18 +127,50 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="text-center space-y-8"
+            className="max-w-2xl mx-auto"
           >
-            <div className="space-y-4">
-              <h1 className="text-4xl md:text-5xl font-bold text-white">
-                🎮 Welcome to GameTrust
-              </h1>
-              <p className="text-xl text-gray-300 max-w-md mx-auto">
-                Let's set up your experience in less than 60 seconds.
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <User className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-4">What brings you to GameTrust?</h2>
+              <p className="text-xl text-gray-400">
+                Select your primary interest to personalize your experience
               </p>
             </div>
-            <div className="w-32 h-32 mx-auto bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-              <span className="text-6xl">🎮</span>
+            
+            <div className="space-y-4">
+              {[
+                { id: 'buyer', label: 'Buy Gaming Accounts', desc: 'Looking to purchase verified gaming accounts' },
+                { id: 'seller', label: 'Sell Gaming Accounts', desc: 'Want to sell your gaming accounts securely' },
+                { id: 'both', label: 'Both Buying & Selling', desc: 'Interested in both buying and selling accounts' }
+              ].map((role) => (
+                <Card
+                  key={role.id}
+                  className={`p-6 cursor-pointer transition-all duration-200 ${
+                    selectedRoles.includes(role.id)
+                      ? 'ring-2 ring-indigo-500 bg-indigo-500/10'
+                      : 'hover:bg-gray-700/50'
+                  }`}
+                  onCardClick={() => handleRoleToggle(role.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-1">{role.label}</h3>
+                      <p className="text-gray-400">{role.desc}</p>
+                    </div>
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                      selectedRoles.includes(role.id)
+                        ? 'border-indigo-500 bg-indigo-500'
+                        : 'border-gray-400'
+                    }`}>
+                      {selectedRoles.includes(role.id) && (
+                        <CheckCircle className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
           </motion.div>
         );
@@ -176,57 +181,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="space-y-8"
+            className="max-w-2xl mx-auto"
           >
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl font-bold text-white">
-                What do you want to do on GameTrust?
-              </h2>
-              <p className="text-gray-300">
-                You can select multiple options
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Gamepad2 className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-4">What games interest you?</h2>
+              <p className="text-xl text-gray-400">
+                Select the games you're interested in trading
               </p>
             </div>
-            <div className="space-y-4">
-              {roles.map((role) => (
-                <Card
-                  key={role.id}
-                  className={`cursor-pointer transition-all duration-200 hover:scale-105 ${
-                    selectedRoles.includes(role.id)
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 border-indigo-400'
-                      : 'bg-gray-800 border-gray-700 hover:border-gray-600'
-                  }`}
-                  onCardClick={() => handleRoleToggle(role.id)}
-                >
-                  <div className="flex items-center space-x-4 p-4">
-                    <span className="text-3xl">{role.icon}</span>
-                    <span className="text-lg font-medium text-white">{role.label}</span>
-                    {selectedRoles.includes(role.id) && (
-                      <CheckCircleIcon className="h-6 w-6 text-green-400 ml-auto" />
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </motion.div>
-        );
-
-      case 2:
-        return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-8"
-          >
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl font-bold text-white">
-                What games are you here for?
-              </h2>
-              <p className="text-gray-300">
-                Select all that interest you
-              </p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
               {games.map((game) => (
                 <button
                   key={game}
@@ -241,7 +208,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
                 </button>
               ))}
             </div>
-            <div className="flex space-x-2">
+            
+            <div className="flex space-x-2 mb-4">
               <input
                 type="text"
                 placeholder="Add other games..."
@@ -254,6 +222,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
                 Add
               </Button>
             </div>
+            
             {selectedGames.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {selectedGames.map((game) => (
@@ -275,67 +244,20 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
           </motion.div>
         );
 
-      case 3:
-        return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-8"
-          >
-            <div className="text-center space-y-4">
-              <h2 className="text-3xl font-bold text-white">
-                🛡️ Your safety comes first
-              </h2>
-              <p className="text-gray-300">
-                We protect both sides with our built-in escrow system
-              </p>
-            </div>
-            <div className="space-y-6">
-              {escrowSteps.map((step, index) => {
-                const Icon = step.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.2 }}
-                    className="flex items-center space-x-4 p-4 bg-gray-800 rounded-lg"
-                  >
-                    <div className={`p-3 rounded-full bg-gray-700 ${step.color}`}>
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-white">{step.title}</h3>
-                      <p className="text-sm text-gray-400">{step.description}</p>
-                    </div>
-                    <span className="text-2xl font-bold text-gray-600">{index + 1}</span>
-                  </motion.div>
-                );
-              })}
-            </div>
-            <div className="text-center">
-              <button 
-                onClick={() => window.open('https://help.gametrust.gg/escrow', '_blank')}
-                className="text-indigo-400 hover:text-indigo-300 text-sm underline transition-colors duration-200 hover:scale-105 transform"
-              >
-                Learn more about how escrow works →
-              </button>
-            </div>
-          </motion.div>
-        );
-
-      case 4:
+      case 2:
         return (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="text-center space-y-8"
+            className="text-center max-w-2xl mx-auto"
           >
-            <div className="space-y-4">
-              <h2 className="text-4xl font-bold text-white">
-                🔥 You're all set!
+            <div className="mb-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-4xl font-bold text-white mb-4">
+                🎉 You're all set!
               </h2>
               <p className="text-xl text-gray-300">
                 Welcome to the GameTrust community
@@ -345,44 +267,44 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="text-6xl"
+              className="text-6xl mb-8"
             >
-              🎉
+              🚀
             </motion.div>
             
             <Confetti show={showConfetti} duration={2000} />
             
-            <div className="space-y-4">
-              <div className="p-6 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-4">Your Profile Summary</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-indigo-100">
-                      <p><strong>Role:</strong> {selectedRoles.join(', ')}</p>
-                    </div>
-                    <button
-                      onClick={() => setCurrentStep(0)}
-                      className="text-xs text-indigo-200 hover:text-white underline transition-colors duration-200"
-                    >
-                      Edit
-                    </button>
+            <Card className="p-6 bg-gradient-to-r from-indigo-600 to-purple-600 mb-8">
+              <h3 className="text-lg font-semibold text-white mb-4">Your Profile Summary</h3>
+              <div className="space-y-3 text-left">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-indigo-100">
+                    <p><strong>Role:</strong> {selectedRoles.join(', ')}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-indigo-100">
-                      <p><strong>Interested Games:</strong> {selectedGames.slice(0, 3).join(', ')}{selectedGames.length > 3 && ` +${selectedGames.length - 3} more`}</p>
-                    </div>
-                    <button
-                      onClick={() => setCurrentStep(1)}
-                      className="text-xs text-indigo-200 hover:text-white underline transition-colors duration-200"
-                    >
-                      Edit
-                    </button>
+                  <button
+                    onClick={() => setCurrentStep(0)}
+                    className="text-xs text-indigo-200 hover:text-white underline transition-colors duration-200"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-indigo-100">
+                    <p><strong>Interested Games:</strong> {selectedGames.slice(0, 3).join(', ')}{selectedGames.length > 3 && ` +${selectedGames.length - 3} more`}</p>
                   </div>
+                  <button
+                    onClick={() => setCurrentStep(1)}
+                    className="text-xs text-indigo-200 hover:text-white underline transition-colors duration-200"
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
-            </div>
+            </Card>
           </motion.div>
         );
+
+
 
       default:
         return null;
@@ -430,8 +352,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
           <div className="flex justify-between mt-2 text-xs text-gray-400">
             <span>Role Selection</span>
             <span>Games</span>
-            <span>Safety Info</span>
-            <span>Summary</span>
             <span>Complete</span>
           </div>
         </div>
@@ -458,12 +378,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
                   variant="outline"
                   className="flex items-center space-x-2"
                 >
-                  <ChevronLeftIcon className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" />
                   <span>Back</span>
                 </Button>
               )}
               
-              {currentStep !== 1 && currentStep < totalSteps - 1 && (
+              {currentStep !== 0 && currentStep < totalSteps - 1 && (
                 <Button
                   onClick={handleSkip}
                   variant="ghost"
@@ -487,7 +407,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onNavigate }) => {
                 <span>
                   {currentStep === totalSteps - 1 ? getCompletionCTA().text : 'Continue'}
                 </span>
-                <ChevronRightIcon className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </motion.div>

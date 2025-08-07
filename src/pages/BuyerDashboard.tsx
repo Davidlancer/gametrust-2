@@ -42,6 +42,7 @@ interface BuyerDashboardProps {
 }
 
 const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
+  // Fresh reload trigger
   const [currentPage, setCurrentPage] = useState<BuyerDashboardPage>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
@@ -133,7 +134,7 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-indigo-900 text-white overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-gray-900 text-white overflow-hidden flex flex-col">
       {/* Testing Mode Banner */}
       <TestingBanner />
       
@@ -162,21 +163,21 @@ const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ onNavigate }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSidebarOpen(false)}
-              className="fixed top-12 bottom-0 left-64 right-0 bg-black/50 z-30 lg:hidden"
+              className="fixed inset-0 bg-black/50 z-[50] lg:hidden"
             />
           )}
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-hidden bg-gray-900/50 backdrop-blur-sm">
-          <div className="h-full p-4 lg:p-6 xl:p-8">
+        <main className="flex-1 overflow-hidden bg-gray-900 w-full min-w-0">
+          <div className="h-full p-2 sm:p-4 lg:p-6 xl:p-8 overflow-x-hidden">
             <motion.div
               key={currentPage}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="h-full"
+              className="h-full w-full"
             >
               {renderCurrentPage()}
             </motion.div>

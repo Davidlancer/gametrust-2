@@ -26,76 +26,78 @@ const Sidebar: React.FC<SidebarProps> = ({
       animate={{
         x: isDesktop ? 0 : (sidebarOpen ? 0 : '-100%')
       }}
-      className="fixed top-12 bottom-0 left-0 z-40 w-64 xl:w-72 bg-gradient-to-b from-gray-900 to-gray-950 border-r border-gray-700/50 lg:translate-x-0 lg:static lg:w-64 xl:w-72 lg:flex-shrink-0 flex flex-col shadow-2xl backdrop-blur-sm lg:x-0"
+      className="fixed top-0 bottom-0 left-0 z-[60] w-56 lg:w-60 bg-white/[0.02] backdrop-blur-xl border-r border-white/[0.08] lg:translate-x-0 lg:static lg:flex-shrink-0 flex flex-col lg:top-12 lg:z-40"
     >
-      {/* Sidebar Header */}
-      <div className="flex items-center justify-between h-16 lg:h-18 px-4 lg:px-6 border-b border-gray-700/50 flex-shrink-0 bg-gray-800/30">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
-            <span className="text-black font-bold text-sm">GT</span>
-          </div>
-          <span className="text-lg lg:text-xl xl:text-2xl font-bold bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
-            GameTrust
-          </span>
-        </div>
+      {/* Mobile Close Button */}
+      <div className="flex items-center justify-end h-12 px-4 lg:hidden">
         <button
           onClick={() => setSidebarOpen(false)}
-          className="lg:hidden p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800"
+          className="p-1.5 rounded-lg hover:bg-white/[0.05] transition-colors duration-200"
         >
-          <XMarkIcon className="w-5 h-5" />
+          <XMarkIcon className="w-4 h-4" />
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 lg:py-6 px-3 lg:px-4">
-        <div className="space-y-1 lg:space-y-2">
-          {navigationItems.map((item) => {
+      <nav className="flex-1 overflow-y-auto py-6 px-3">
+        <div className="space-y-1">
+          {navigationItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
+            const showSeparator = index === 2 || index === 4; // Add subtle separators
             
             return (
-              <button
-                key={item.id}
-                onClick={() => handlePageChange(item.id)}
-                className={`w-full flex items-center justify-between px-3 lg:px-4 py-2.5 lg:py-3 text-xs lg:text-sm font-semibold rounded-lg lg:rounded-xl transition-all duration-300 group ${
-                  isActive
-                    ? 'bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-400 border border-indigo-500/40 shadow-lg shadow-indigo-500/10'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800/60 hover:shadow-md'
-                }`}
-              >
-                <div className="flex items-center">
-                  <Icon className={`w-4 h-4 lg:w-5 lg:h-5 mr-3 lg:mr-4 transition-transform duration-300 ${
-                    isActive ? 'scale-110' : 'group-hover:scale-105'
-                  }`} />
-                  <span className="tracking-normal lg:tracking-wide">{item.label}</span>
-                </div>
-                {item.id === 'orders' && (
-                  <span className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-2 lg:px-3 py-1 lg:py-1.5 rounded-full min-w-[20px] lg:min-w-[24px] text-center shadow-lg">
-                    3
-                  </span>
+              <React.Fragment key={item.id}>
+                {showSeparator && (
+                  <div className="h-px bg-white/[0.06] mx-2 my-3" />
                 )}
-              </button>
+                <motion.button
+                  onClick={() => handlePageChange(item.id)}
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 group ${
+                    isActive
+                      ? 'bg-white/[0.08] backdrop-blur-sm border border-white/[0.12]'
+                      : 'hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-4 h-4 transition-all duration-200 ${
+                      isActive ? 'scale-105' : 'group-hover:scale-105'
+                    }`} />
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  {item.id === 'orders' && (
+                    <span className="bg-red-500/90 text-white text-xs font-semibold px-1.5 py-0.5 rounded-md min-w-[18px] text-center">
+                      3
+                    </span>
+                  )}
+                </motion.button>
+              </React.Fragment>
             );
           })}
         </div>
       </nav>
 
       {/* User Profile Section */}
-      <div className="flex-shrink-0 p-3 lg:p-4 border-t border-gray-700/50 bg-gray-800/30">
-        <div className="flex items-center space-x-3 p-2 lg:p-3 rounded-lg lg:rounded-xl bg-gray-800/50 hover:bg-gray-800/70 transition-all duration-300 cursor-pointer group">
-          <div className="relative">
+      <div className="flex-shrink-0 p-3 border-t border-white/[0.06]">
+        <motion.div 
+          whileHover={{ scale: 1.02 }}
+          className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-all duration-200 cursor-pointer group"
+        >
+          <div className="relative flex-shrink-0">
             <img
               src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face"
               alt="User"
-              className="w-8 h-8 lg:w-10 lg:h-10 rounded-full ring-2 ring-indigo-500/30 group-hover:ring-indigo-500/50 transition-all duration-300"
+              className="w-8 h-8 rounded-full ring-1 ring-white/[0.12] group-hover:ring-white/[0.2] transition-all duration-200"
             />
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 lg:w-3.5 lg:h-3.5 bg-green-500 rounded-full border-2 border-gray-900"></div>
+            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border border-gray-900"></div>
           </div>
-          <div className="flex-1">
-            <p className="text-xs lg:text-sm font-semibold text-white group-hover:text-indigo-400 transition-colors duration-300">Blunt</p>
-            <p className="text-xs text-gray-400 font-medium">Verified Seller</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">Blunt</p>
+            <p className="text-xs opacity-60 truncate">Verified Seller</p>
           </div>
-        </div>
+        </motion.div>
       </div>
     </motion.aside>
   );
