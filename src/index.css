@@ -48,6 +48,53 @@
     touch-action: manipulation;
   }
   
+  /* Mobile sticky action bar optimizations */
+  .mobile-action-bar {
+    /* Ensure proper safe area handling */
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+    padding-left: max(env(safe-area-inset-left), 1rem);
+    padding-right: max(env(safe-area-inset-right), 1rem);
+  }
+  
+  /* Prevent content overlap with mobile action bar */
+  .mobile-content-padding {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 120px);
+  }
+  
+  /* Responsive spacing for different device heights */
+  @media (max-height: 640px) {
+    .mobile-action-bar {
+      padding-top: 0.75rem;
+      padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+    }
+    
+    .mobile-content-padding {
+      padding-bottom: calc(env(safe-area-inset-bottom) + 100px);
+    }
+  }
+  
+  @media (max-height: 568px) {
+    .mobile-action-bar {
+      padding-top: 0.5rem;
+      padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+    }
+    
+    .mobile-content-padding {
+      padding-bottom: calc(env(safe-area-inset-bottom) + 90px);
+    }
+  }
+  
+  /* Smooth transitions for action bar visibility */
+  .action-bar-transition {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease-in-out;
+  }
+  
+  .action-bar-hidden {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  
   /* Prevent text selection on touch */
   .touch-callout-none {
     -webkit-touch-callout: none;
