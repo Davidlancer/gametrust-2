@@ -206,7 +206,7 @@ const DisputesPage: React.FC = () => {
   };
 
   // Enhanced dispute actions with toast notifications
-  const resolveDispute = (disputeId: string, resolution: 'resolved_buyer' | 'resolved_seller') => {
+  const resolveDispute = (disputeId: string, resolution: 'resolved_buyer' | 'resolved_seller' = 'resolved_buyer') => {
     const dispute = disputes.find(d => d.id === disputeId);
     if (!dispute) return;
     
@@ -317,9 +317,10 @@ const DisputesPage: React.FC = () => {
     toast.success(`Bulk ${action} completed for ${actionCount} dispute(s).`);
   };
 
-  const handleViewDispute = (dispute: Dispute) => {
-    setSelectedDispute(dispute);
-    setShowDisputeModal(true);
+  const handleViewDispute = (disputeId: string) => {
+    // Simple view action - could open a modal or navigate to detail page
+    addActivity(`Viewed dispute ${disputeId}`, 'dispute', 'info');
+    toast.info(`Viewing dispute ${disputeId}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -397,30 +398,30 @@ const DisputesPage: React.FC = () => {
       </div>
 
       {/* Filters and Search */}
-      <Card className="p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
+      <Card className="p-4 sm:p-6">
+        <div className="flex flex-col space-y-4">
           {/* Search */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search disputes..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-600 rounded-lg bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="block w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-600 rounded-lg bg-gray-700/50 text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
             />
           </div>
 
           {/* Filters */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <FunnelIcon className="w-5 h-5 text-gray-400" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <FunnelIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-red-500 focus:border-red-500 px-3 py-2"
+                className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-red-500 focus:border-red-500 px-2 sm:px-3 py-2 flex-1 sm:flex-initial min-w-0"
               >
                 <option value="all">All Status</option>
                 <option value="open">Open</option>
@@ -433,7 +434,7 @@ const DisputesPage: React.FC = () => {
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-red-500 focus:border-red-500 px-3 py-2"
+              className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-red-500 focus:border-red-500 px-2 sm:px-3 py-2 w-full sm:w-auto"
             >
               <option value="all">All Priority</option>
               <option value="urgent">Urgent</option>

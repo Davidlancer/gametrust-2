@@ -267,13 +267,18 @@ const BuyerDisputes: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between"
+            transition={{ delay: 0.1 }}
+            className="flex flex-col space-y-4 sm:space-y-6"
           >
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">My Disputes</h1>
-              <p className="text-gray-400">Track and resolve purchase issues</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">My Disputes</h1>
+                <p className="text-gray-400 text-sm sm:text-base">Track and resolve purchase issues</p>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
+            
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap gap-2 sm:gap-4">
               {filters.map((filterItem) => {
                 const hasNewMessages = filterItem.key !== 'all' && 
                   mockDisputes.some(d => d.status === filterItem.key && d.hasNewMessages);
@@ -282,7 +287,7 @@ const BuyerDisputes: React.FC = () => {
                   <motion.button
                     key={filterItem.key}
                     onClick={() => setFilter(filterItem.key)}
-                    className={`relative px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    className={`relative px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial min-w-0 ${
                       filter === filterItem.key
                         ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
                         : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700/50'
@@ -290,16 +295,16 @@ const BuyerDisputes: React.FC = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    {filterItem.label}
+                    <span className="truncate">{filterItem.label}</span>
                     {filterItem.count > 0 && (
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                      <span className={`ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs flex-shrink-0 ${
                         filter === filterItem.key ? 'bg-white/20' : 'bg-gray-600'
                       }`}>
                         {filterItem.count}
                       </span>
                     )}
                     {hasNewMessages && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900" />
+                      <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full border-2 border-gray-900" />
                     )}
                   </motion.button>
                 );

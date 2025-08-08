@@ -22,6 +22,7 @@ import { HeartIcon, BoltIcon } from '@heroicons/react/24/solid';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
+import StatusBadge from '../UI/StatusBadge';
 
 interface DisputeEvidence {
   id: string;
@@ -183,42 +184,77 @@ const mockDisputes: Dispute[] = [
       }
     ],
     adminNotes: 'Seller provided comprehensive video evidence. All items confirmed present.'
+  },
+  {
+    id: 'DIS_004',
+    orderId: 'ORD_12348',
+    buyerUsername: 'apex_legend',
+    buyerAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+    listingTitle: 'Apex Legends Predator Account',
+    reason: 'Account recovery attempted by original owner',
+    description: 'The original owner is trying to recover the account. This is a serious security issue.',
+    amount: 75000,
+    status: 'escalated',
+    createdAt: '2024-01-20T16:45:00Z',
+    evidence: [
+      {
+        id: 'ev4',
+        type: 'image',
+        url: '/evidence/recovery_attempt.jpg',
+        name: 'Account Recovery Email',
+        uploadedAt: '2024-01-20T17:00:00Z'
+      }
+    ],
+    messages: [
+      {
+        id: 'msg10',
+        sender: 'buyer',
+        message: 'Someone is trying to recover this account! I got an email about password reset attempts.',
+        timestamp: '2024-01-20T16:45:00Z'
+      },
+      {
+        id: 'msg11',
+        sender: 'seller',
+        message: 'This is impossible. The account was legitimately obtained and I have all the proof.',
+        timestamp: '2024-01-20T17:30:00Z'
+      },
+      {
+        id: 'msg12',
+        sender: 'admin',
+        message: 'This case has been escalated to our security team for investigation. Please do not attempt to access the account.',
+        timestamp: '2024-01-20T18:15:00Z'
+      }
+    ]
   }
 ];
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'open':
+    case 'active':
       return (
-        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 border">
-          <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
-          Open
-        </Badge>
-      );
-    case 'under_review':
-      return (
-        <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 border">
+        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 border">
           <ClockIcon className="w-3 h-3 mr-1" />
-          Under Review
+          Active
         </Badge>
       );
-    case 'resolved_seller':
+    case 'resolved':
       return (
         <Badge className="bg-green-500/20 text-green-400 border-green-500/30 border">
           <CheckCircleIcon className="w-3 h-3 mr-1" />
-          Seller Won
+          Resolved
         </Badge>
       );
-    case 'resolved_buyer':
+    case 'escalated':
       return (
-        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 border">
-          <XCircleIcon className="w-3 h-3 mr-1" />
-          Buyer Refunded
+        <Badge className="bg-red-500/20 text-red-400 border-red-500/30 border">
+          <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
+          Escalated
         </Badge>
       );
     case 'closed':
       return (
         <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30 border">
+          <XCircleIcon className="w-3 h-3 mr-1" />
           Closed
         </Badge>
       );
@@ -238,6 +274,14 @@ const getEvidenceIcon = (type: string) => {
     default:
       return <PaperClipIcon className="w-5 h-5" />;
   }
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 };
 
 const Disputes: React.FC = () => {
@@ -264,6 +308,17 @@ const Disputes: React.FC = () => {
       dispute.reason.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const getChatNotice = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'resolved':
+        return "✅ This dispute has been resolved. You can no longer send messages.";
+      case 'escalated':
+        return "⚠️ This dispute has been escalated to our support team. Chat is temporarily locked.";
+      default:
+        return null;
+    }
+  };
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !selectedDispute) return;
@@ -324,7 +379,7 @@ const Disputes: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <div className="border-b border-gray-800 bg-gray-900/95 backdrop-blur-sm sticky top-0 z-40">
+      <div className="border-b border-gray-800 bg-gray-900/95 backdrop-blur-sm">
         <div className="px-6 py-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col space-y-2">
@@ -333,13 +388,13 @@ const Disputes: React.FC = () => {
             </div>
             
             {/* Animated Tabs */}
-            <div className="mt-8">
-              <div className="flex space-x-1 bg-gray-800/50 p-1 rounded-xl backdrop-blur-sm border border-gray-700/50">
+            <div className="mt-6 sm:mt-8">
+              <div className="flex flex-wrap sm:flex-nowrap gap-1 sm:space-x-1 bg-gray-800/50 p-1 rounded-xl backdrop-blur-sm border border-gray-700/50">
                 {tabs.map((tab) => (
                   <motion.button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`relative px-6 py-3 text-sm font-medium rounded-lg transition-all duration-200 flex items-center space-x-2 ${
+                    className={`relative px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 flex items-center space-x-1 sm:space-x-2 flex-1 sm:flex-initial justify-center sm:justify-start min-w-0 ${
                       activeTab === tab.id
                         ? 'text-white'
                         : 'text-gray-400 hover:text-gray-300'
@@ -355,8 +410,8 @@ const Disputes: React.FC = () => {
                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                       />
                     )}
-                    <span className="relative z-10">{tab.label}</span>
-                    <span className={`relative z-10 px-2 py-0.5 text-xs rounded-full ${
+                    <span className="relative z-10 truncate">{tab.label}</span>
+                    <span className={`relative z-10 px-1.5 sm:px-2 py-0.5 text-xs rounded-full flex-shrink-0 ${
                       activeTab === tab.id
                         ? 'bg-[#00FFB2]/20 text-[#00FFB2]'
                         : 'bg-gray-700 text-gray-400'
@@ -424,28 +479,28 @@ const Disputes: React.FC = () => {
             </Card>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Disputes List */}
             <div className="lg:col-span-1">
               <Card className="bg-gray-800/30 backdrop-blur-sm border border-white/10">
-                <div className="flex flex-wrap items-center justify-between gap-4 w-full mb-4">
-                  <h3 className="text-xl font-semibold text-white whitespace-nowrap">All Disputes</h3>
-                  <div className="flex flex-wrap items-center gap-2 min-w-0">
-                    <div className="relative">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3 sm:gap-4 w-full mb-4">
+                  <h3 className="text-lg sm:text-xl font-semibold text-white whitespace-nowrap">All Disputes</h3>
+                  <div className="flex flex-wrap items-center gap-2 min-w-0 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-auto">
                       <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="text"
                         placeholder="Search disputes..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent w-full md:w-64"
+                        className="pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-transparent w-full sm:w-64"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Dispute Cards */}
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                <div className="space-y-3 sm:space-y-4 max-h-[400px] sm:max-h-[600px] overflow-y-auto pr-1 sm:pr-2">
                   <AnimatePresence>
                     {filteredDisputes.map((dispute, index) => (
                       <motion.div
@@ -455,7 +510,7 @@ const Disputes: React.FC = () => {
                         exit={{ opacity: 0, y: -20, scale: 0.95 }}
                         transition={{ delay: index * 0.1, type: "spring", bounce: 0.3 }}
                         onClick={() => setSelectedDispute(dispute)}
-                        className={`group p-6 rounded-2xl border cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
+                        className={`cursor-pointer transition-all duration-300 ${
                           selectedDispute?.id === dispute.id
                             ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30 shadow-lg shadow-blue-500/10'
                             : 'bg-gray-800/30 border-white/10 hover:bg-gray-800/50 hover:border-white/20'
@@ -463,50 +518,36 @@ const Disputes: React.FC = () => {
                         whileHover={{ y: -2 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center space-x-4">
-                            <div className="relative">
-                              <img
-                                src={dispute.buyerAvatar}
-                                alt={dispute.buyerUsername}
-                                className="w-12 h-12 rounded-full border-2 border-white/10"
-                              />
-                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-900" />
+                        <Card className="w-full rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-200 bg-transparent border-inherit">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start px-3 sm:px-4 py-2 sm:py-3 border-b border-white/10 gap-2 sm:gap-0">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-sm text-white truncate">
+                                Order #{dispute.orderId}
+                              </h3>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {formatDate(dispute.createdAt)}
+                              </p>
                             </div>
-                            <div>
-                              <p className="text-white font-semibold">{dispute.buyerUsername}</p>
-                              <p className="text-gray-400 text-sm">{dispute.id}</p>
+                            <div className="flex-shrink-0 self-start sm:self-center">
+                              <StatusBadge status={dispute.status} />
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            {getStatusBadge(dispute.status)}
-                            <EyeIcon className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+
+                          <div className="px-3 sm:px-4 py-2 sm:py-3 text-sm text-gray-300">
+                            <p className="line-clamp-2 leading-relaxed">
+                              {dispute.reason || "No summary provided."}
+                            </p>
                           </div>
-                        </div>
-                        
-                        <div className="mb-4">
-                          <h3 className="text-white font-medium mb-2 group-hover:text-blue-300 transition-colors">
-                            {dispute.listingTitle}
-                          </h3>
-                          <p className="text-gray-400 text-sm line-clamp-2 leading-relaxed">
-                            {dispute.reason}
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                          <div className="flex items-center space-x-4">
-                            <span className="text-blue-400 font-semibold text-lg">
-                              ₦{dispute.amount.toLocaleString()}
-                            </span>
-                            <span className="text-gray-500 text-sm">
-                              {new Date(dispute.createdAt).toLocaleDateString()}
-                            </span>
+
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-2 sm:py-3 border-t border-white/10 gap-2 sm:gap-0">
+                            <div className="text-xs text-gray-400 order-2 sm:order-1">
+                              Updated: {formatDate(dispute.resolvedAt || dispute.createdAt)}
+                            </div>
+                            <div className="font-medium text-blue-400 hover:text-blue-300 transition cursor-pointer text-sm order-1 sm:order-2 self-end sm:self-auto">
+                              View Details →
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                            <span className="text-gray-400 text-sm">Active</span>
-                          </div>
-                        </div>
+                        </Card>
                       </motion.div>
                     ))}
                   </AnimatePresence>
@@ -533,7 +574,7 @@ const Disputes: React.FC = () => {
             </div>
 
             {/* Dispute Details */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 mt-6 lg:mt-0">
               <AnimatePresence>
                 {selectedDispute ? (
                   <motion.div
@@ -541,33 +582,33 @@ const Disputes: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ type: "spring", bounce: 0.3 }}
-                    className="space-y-6"
+                    className="space-y-4 sm:space-y-6"
                   >
                     {/* Dispute Header */}
                     <Card className="bg-gray-800/20 backdrop-blur-sm border border-white/10">
-                      <div className="p-6">
-                        <div className="flex items-start justify-between mb-6">
-                          <div className="flex items-center space-x-4">
-                            <div className="relative">
+                      <div className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 sm:mb-6 gap-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                            <div className="relative self-start sm:self-auto">
                               <img
                                 src={selectedDispute.buyerAvatar}
                                 alt={selectedDispute.buyerUsername}
-                                className="w-16 h-16 rounded-full border-2 border-white/10"
+                                className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-white/10"
                               />
-                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-gray-900 flex items-center justify-center">
-                                <ExclamationTriangleIcon className="w-3 h-3 text-white" />
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full border-2 border-gray-900 flex items-center justify-center">
+                                <ExclamationTriangleIcon className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                               </div>
                             </div>
-                            <div>
-                              <h3 className="text-2xl font-bold text-white mb-1">{selectedDispute.listingTitle}</h3>
-                              <p className="text-gray-400 mb-3">Dispute with @{selectedDispute.buyerUsername}</p>
-                              <div className="flex items-center space-x-6">
-                                <div className="flex items-center space-x-2 text-sm text-gray-400">
-                                  <CalendarIcon className="w-4 h-4" />
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg sm:text-2xl font-bold text-white mb-1 line-clamp-2">{selectedDispute.listingTitle}</h3>
+                              <p className="text-gray-400 mb-2 sm:mb-3 text-sm sm:text-base">Dispute with @{selectedDispute.buyerUsername}</p>
+                              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-6">
+                                <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-400">
+                                  <CalendarIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                                   <span>Filed {new Date(selectedDispute.createdAt).toLocaleDateString()}</span>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                  <span className="text-2xl font-bold text-[#00FFB2]">₦{selectedDispute.amount.toLocaleString()}</span>
+                                  <span className="text-lg sm:text-2xl font-bold text-[#00FFB2]">₦{selectedDispute.amount.toLocaleString()}</span>
                                   <Badge className="bg-[#00FFB2]/20 text-[#00FFB2] border-[#00FFB2]/30 border">
                                     <span className="text-xs font-medium">DISPUTED</span>
                                   </Badge>
@@ -575,7 +616,7 @@ const Disputes: React.FC = () => {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center justify-end sm:justify-start space-x-3 self-end sm:self-auto">
                             {getStatusBadge(selectedDispute.status)}
                             <Button variant="outline" size="sm" className="border-red-500/30 text-red-400 hover:bg-red-500/10">
                               <FireIcon className="w-4 h-4 mr-2" />
@@ -584,52 +625,52 @@ const Disputes: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                          <div className="space-y-3 sm:space-y-4">
                             <div>
-                              <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
+                              <h4 className="text-sm font-medium text-gray-300 mb-2 sm:mb-3 flex items-center">
                                 <ExclamationTriangleIcon className="w-4 h-4 mr-2 text-yellow-400" />
                                 Dispute Reason
                               </h4>
-                              <div className="p-4 bg-gray-800/50 rounded-xl border border-white/10">
-                                <p className="text-white font-medium">{selectedDispute.reason}</p>
+                              <div className="p-3 sm:p-4 bg-gray-800/50 rounded-xl border border-white/10">
+                                <p className="text-white font-medium text-sm sm:text-base">{selectedDispute.reason}</p>
                               </div>
                             </div>
                             
                             <div>
-                              <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
+                              <h4 className="text-sm font-medium text-gray-300 mb-2 sm:mb-3 flex items-center">
                                 <DocumentTextIcon className="w-4 h-4 mr-2 text-blue-400" />
                                 Description
                               </h4>
-                              <div className="p-4 bg-gray-800/50 rounded-xl border border-white/10">
-                                <p className="text-gray-300 leading-relaxed">{selectedDispute.description}</p>
+                              <div className="p-3 sm:p-4 bg-gray-800/50 rounded-xl border border-white/10">
+                                <p className="text-gray-300 leading-relaxed text-sm sm:text-base">{selectedDispute.description}</p>
                               </div>
                             </div>
                           </div>
 
-                          <div className="space-y-4">
-                            <div className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl">
-                              <div className="flex items-center space-x-3 mb-4">
+                          <div className="space-y-3 sm:space-y-4">
+                            <div className="p-4 sm:p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl">
+                              <div className="flex items-center space-x-3 mb-3 sm:mb-4">
                                 <div className="p-2 bg-blue-500/20 rounded-lg">
-                                  <ShieldCheckIcon className="w-5 h-5 text-blue-400" />
+                                  <ShieldCheckIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                                 </div>
                                 <div>
-                                  <h4 className="text-white font-semibold">Dispute Protection</h4>
-                                  <p className="text-blue-300 text-sm">Your funds are secured</p>
+                                  <h4 className="text-white font-semibold text-sm sm:text-base">Dispute Protection</h4>
+                                  <p className="text-blue-300 text-xs sm:text-sm">Your funds are secured</p>
                                 </div>
                               </div>
-                              <p className="text-gray-300 text-sm leading-relaxed">
+                              <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
                                 Our team is reviewing this case. Funds will remain in escrow until resolution.
                               </p>
                             </div>
 
                             {selectedDispute.adminNotes && (
-                              <div className="p-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-xl">
+                              <div className="p-3 sm:p-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-xl">
                                 <h4 className="text-sm font-medium text-green-400 mb-2 flex items-center">
                                   <CheckCircleIcon className="w-4 h-4 mr-2" />
                                   Admin Resolution
                                 </h4>
-                                <p className="text-green-300 text-sm leading-relaxed">{selectedDispute.adminNotes}</p>
+                                <p className="text-green-300 text-xs sm:text-sm leading-relaxed">{selectedDispute.adminNotes}</p>
                               </div>
                             )}
                           </div>
@@ -639,15 +680,15 @@ const Disputes: React.FC = () => {
 
                     {/* Evidence */}
                     <Card className="bg-gray-800/20 backdrop-blur-sm border border-white/10">
-                      <div className="p-6">
-                        <div className="flex items-center justify-between mb-6">
+                      <div className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
                           <div className="flex items-center space-x-3">
                             <div className="p-2 bg-purple-500/20 rounded-lg">
-                              <DocumentTextIcon className="w-5 h-5 text-purple-400" />
+                              <DocumentTextIcon className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
                             </div>
                             <div>
-                              <h3 className="text-xl font-bold text-white">Evidence & Proof</h3>
-                              <p className="text-gray-400 text-sm">Upload supporting documents</p>
+                              <h3 className="text-lg sm:text-xl font-bold text-white">Evidence & Proof</h3>
+                              <p className="text-gray-400 text-xs sm:text-sm">Upload supporting documents</p>
                             </div>
                           </div>
                           <Button
@@ -655,32 +696,32 @@ const Disputes: React.FC = () => {
                             size="sm"
                             onClick={handleUploadEvidence}
                             disabled={uploadingEvidence || selectedDispute.status === 'resolved' || selectedDispute.status === 'closed'}
-                            className="border-[#00FFB2]/30 text-[#00FFB2] hover:bg-[#00FFB2]/10"
+                            className="border-[#00FFB2]/30 text-[#00FFB2] hover:bg-[#00FFB2]/10 self-start sm:self-auto"
                           >
                             <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
                             {uploadingEvidence ? 'Uploading...' : 'Add Evidence'}
                           </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                           {selectedDispute.evidence.map((evidence, index) => (
                             <motion.div
                               key={evidence.id}
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: index * 0.1 }}
-                              className="group flex items-center space-x-4 p-4 bg-gray-800/50 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer"
+                              className="group flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 bg-gray-800/50 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer"
                               whileHover={{ scale: 1.02 }}
                             >
-                              <div className="flex-shrink-0 p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl group-hover:from-blue-500/30 group-hover:to-purple-500/30 transition-all duration-300">
+                              <div className="flex-shrink-0 p-2 sm:p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl group-hover:from-blue-500/30 group-hover:to-purple-500/30 transition-all duration-300">
                                 {getEvidenceIcon(evidence.type)}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-white font-semibold text-sm truncate group-hover:text-blue-300 transition-colors">{evidence.name}</p>
+                                <p className="text-white font-semibold text-xs sm:text-sm truncate group-hover:text-blue-300 transition-colors">{evidence.name}</p>
                                 <p className="text-gray-400 text-xs mt-1">
                                   {new Date(evidence.uploadedAt).toLocaleDateString()}
                                 </p>
-                                <div className="flex items-center space-x-2 mt-2">
+                                <div className="flex items-center space-x-2 mt-1 sm:mt-2">
                                   <Badge className="bg-green-500/20 text-green-400 border-green-500/30 border text-xs">
                                     Verified
                                   </Badge>
@@ -695,13 +736,13 @@ const Disputes: React.FC = () => {
                           <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="text-center py-12"
+                            className="text-center py-8 sm:py-12"
                           >
-                            <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                              <DocumentTextIcon className="w-10 h-10 text-gray-400" />
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                              <DocumentTextIcon className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                             </div>
-                            <h4 className="text-lg font-semibold text-white mb-2">No Evidence Yet</h4>
-                            <p className="text-gray-400 max-w-md mx-auto leading-relaxed">
+                            <h4 className="text-base sm:text-lg font-semibold text-white mb-2">No Evidence Yet</h4>
+                            <p className="text-gray-400 max-w-md mx-auto leading-relaxed text-sm sm:text-base px-4">
                               Upload screenshots, videos, or documents to support your case and help resolve this dispute faster.
                             </p>
                           </motion.div>
@@ -711,18 +752,18 @@ const Disputes: React.FC = () => {
 
                     {/* Messages */}
                     <Card className="bg-gray-800/20 backdrop-blur-sm border border-white/10">
-                      <div className="p-6">
-                        <div className="flex items-center space-x-3 mb-6">
+                      <div className="p-4 sm:p-6">
+                        <div className="flex items-center space-x-3 mb-4 sm:mb-6">
                           <div className="p-2 bg-green-500/20 rounded-lg">
-                            <ChatBubbleLeftRightIcon className="w-5 h-5 text-green-400" />
+                            <ChatBubbleLeftRightIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                           </div>
                           <div>
-                            <h3 className="text-xl font-bold text-white">Communication</h3>
-                            <p className="text-gray-400 text-sm">Chat with buyer and support team</p>
+                            <h3 className="text-lg sm:text-xl font-bold text-white">Communication</h3>
+                            <p className="text-gray-400 text-xs sm:text-sm">Chat with buyer and support team</p>
                           </div>
                         </div>
                         
-                        <div className="space-y-4 max-h-80 overflow-y-auto mb-6 pr-2">
+                        <div className="space-y-3 sm:space-y-4 max-h-64 sm:max-h-80 overflow-y-auto mb-4 sm:mb-6 pr-1 sm:pr-2">
                           {selectedDispute.messages.map((message, index) => (
                             <motion.div
                               key={message.id}
@@ -732,7 +773,7 @@ const Disputes: React.FC = () => {
                               className={`flex ${message.sender === 'seller' ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
-                                className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-lg ${
+                                className={`max-w-[85%] sm:max-w-xs lg:max-w-md px-3 sm:px-4 py-2 sm:py-3 rounded-2xl shadow-lg ${
                                   message.sender === 'seller'
                                     ? 'bg-gradient-to-r from-[#00FFB2]/20 to-[#00A8E8]/20 text-white border border-[#00FFB2]/30'
                                     : message.sender === 'admin'
@@ -740,35 +781,71 @@ const Disputes: React.FC = () => {
                                     : 'bg-gray-700/50 text-white border border-gray-600/50'
                                 }`}
                               >
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <span className="text-xs font-semibold capitalize">
-                                    {message.sender === 'seller' ? 'You' : message.sender}
-                                  </span>
-                                  {message.sender === 'admin' && (
-                                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 border text-xs">
-                                      <ShieldCheckIcon className="w-3 h-3 mr-1" />
-                                      Support
-                                    </Badge>
-                                  )}
+                                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-1 sm:mb-2">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-xs font-semibold capitalize">
+                                      {message.sender === 'seller' ? 'You' : message.sender}
+                                    </span>
+                                    {message.sender === 'admin' && (
+                                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 border text-xs">
+                                        <ShieldCheckIcon className="w-3 h-3 mr-1" />
+                                        Support
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <span className="text-xs text-gray-400">
                                     {new Date(message.timestamp).toLocaleTimeString()}
                                   </span>
                                 </div>
-                                <p className="text-sm leading-relaxed">{message.message}</p>
+                                <p className="text-xs sm:text-sm leading-relaxed">{message.message}</p>
                               </div>
                             </motion.div>
                           ))}
                         </div>
 
-                        {(selectedDispute.status === 'active' || selectedDispute.status === 'escalated') && (
-                          <div className="flex items-center space-x-3">
+                        {/* Status Badge */}
+                        <div className="mb-3 sm:mb-4">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs sm:text-sm font-medium text-gray-400">Status:</span>
+                            <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                              selectedDispute.status === 'active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                              selectedDispute.status === 'resolved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                              selectedDispute.status === 'escalated' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                              'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                            }`}>
+                              {selectedDispute.status === 'active' && '🟢'}
+                              {selectedDispute.status === 'resolved' && '✅'}
+                              {selectedDispute.status === 'escalated' && '⚠️'}
+                              {selectedDispute.status === 'closed' && '🔒'}
+                              {' '}{selectedDispute.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Chat Input or Notice */}
+                        {['resolved', 'escalated', 'closed'].includes(selectedDispute.status.toLowerCase()) ? (
+                          <div className="text-center py-4 sm:py-6">
+                            <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/50 rounded-full mb-2 sm:mb-3">
+                              {selectedDispute.status === 'resolved' && <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />}
+                              {selectedDispute.status === 'escalated' && <ExclamationTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />}
+                              {selectedDispute.status === 'closed' && <XCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />}
+                            </div>
+                            <p className="text-xs sm:text-sm text-gray-400 italic max-w-md mx-auto leading-relaxed px-4">
+                              {getChatNotice(selectedDispute.status)}
+                              {selectedDispute.status === 'escalated' && (
+                                <><br /><span className="text-xs text-gray-500 mt-2 block">Support will reply shortly. You'll be notified via email.</span></>
+                              )}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 sm:space-x-3">
                             <div className="flex-1 relative">
                               <input
                                 type="text"
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
                                 placeholder="Type your message..."
-                                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-[#00FFB2]/50 transition-all duration-300"
+                                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:border-[#00FFB2]/50 transition-all duration-300 text-sm"
                                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                               />
                             </div>
@@ -776,9 +853,9 @@ const Disputes: React.FC = () => {
                               variant="primary"
                               onClick={handleSendMessage}
                               disabled={!newMessage.trim()}
-                              className="bg-gradient-to-r from-[#00FFB2] to-[#00A8E8] text-black px-4 py-3 rounded-xl hover:scale-105 transition-all duration-300"
+                              className="bg-gradient-to-r from-[#00FFB2] to-[#00A8E8] text-black px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl hover:scale-105 transition-all duration-300"
                             >
-                              <ChatBubbleLeftRightIcon className="w-5 h-5" />
+                              <ChatBubbleLeftRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                             </Button>
                           </div>
                         )}
@@ -787,22 +864,22 @@ const Disputes: React.FC = () => {
 
                     {/* Support CTA */}
                     <Card className="bg-gradient-to-r from-[#00FFB2]/10 to-[#00A8E8]/10 backdrop-blur-sm border border-[#00FFB2]/20">
-                      <div className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="p-3 bg-[#00FFB2]/20 rounded-xl">
-                              <HeartIcon className="w-6 h-6 text-[#00FFB2]" />
+                      <div className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
+                          <div className="flex items-center space-x-3 sm:space-x-4">
+                            <div className="p-2 sm:p-3 bg-[#00FFB2]/20 rounded-xl">
+                              <HeartIcon className="w-5 h-5 sm:w-6 sm:h-6 text-[#00FFB2]" />
                             </div>
                             <div>
-                              <h3 className="text-lg font-bold text-white mb-1">Need Help?</h3>
-                              <p className="text-gray-300 text-sm">Our support team is here to help resolve your dispute quickly and fairly.</p>
+                              <h3 className="text-base sm:text-lg font-bold text-white mb-1">Need Help?</h3>
+                              <p className="text-gray-300 text-xs sm:text-sm">Our support team is here to help resolve your dispute quickly and fairly.</p>
                             </div>
                           </div>
                           <Button 
                             variant="primary" 
-                            className="bg-gradient-to-r from-[#00FFB2] to-[#00A8E8] text-black font-semibold px-6 py-3 rounded-xl hover:scale-105 transition-all duration-300"
+                            className="bg-gradient-to-r from-[#00FFB2] to-[#00A8E8] text-black text-sm font-medium py-2 px-4 rounded-lg hover:scale-105 transition-all duration-300 self-start sm:self-auto"
                           >
-                            <BoltIcon className="w-5 h-5 mr-2" />
+                            <BoltIcon className="w-4 h-4 mr-2" />
                             Contact Support
                           </Button>
                         </div>
@@ -816,12 +893,12 @@ const Disputes: React.FC = () => {
                     className="h-full"
                   >
                     <Card className="h-full flex items-center justify-center bg-gray-800/20 backdrop-blur-sm border border-white/10">
-                      <div className="text-center py-20">
-                        <div className="w-24 h-24 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                          <ExclamationTriangleIcon className="w-12 h-12 text-gray-400" />
+                      <div className="text-center py-12 sm:py-20 px-4">
+                        <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                          <ExclamationTriangleIcon className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400" />
                         </div>
-                        <h3 className="text-2xl font-bold text-white mb-3">Select a Dispute</h3>
-                        <p className="text-gray-400 max-w-md mx-auto leading-relaxed">
+                        <h3 className="text-lg sm:text-2xl font-bold text-white mb-2 sm:mb-3">Select a Dispute</h3>
+                        <p className="text-gray-400 max-w-md mx-auto leading-relaxed text-sm sm:text-base">
                           Choose a dispute from the list to view details, evidence, and communicate with all parties involved.
                         </p>
                       </div>
@@ -833,37 +910,7 @@ const Disputes: React.FC = () => {
            </div>
          </div>
 
-         {/* Sticky Support CTA */}
-         <motion.div
-           initial={{ opacity: 0, y: 50 }}
-           animate={{ opacity: 1, y: 0 }}
-           transition={{ delay: 1 }}
-           className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50"
-         >
-           <Card className="bg-gradient-to-r from-[#00FFB2]/90 to-[#00A8E8]/90 backdrop-blur-sm border border-[#00FFB2]/30 shadow-2xl shadow-[#00FFB2]/20">
-             <div className="px-6 py-4">
-               <div className="flex items-center space-x-4">
-                 <div className="flex items-center space-x-3">
-                   <div className="p-2 bg-white/20 rounded-lg">
-                     <HeartIcon className="w-5 h-5 text-white" />
-                   </div>
-                   <div>
-                     <p className="text-white font-semibold text-sm">Need urgent help?</p>
-                     <p className="text-white/80 text-xs">Our support team is standing by</p>
-                   </div>
-                 </div>
-                 <Button 
-                   variant="secondary" 
-                   size="sm"
-                   className="bg-white/20 text-white border-white/30 hover:bg-white/30 font-medium px-4 py-2 rounded-lg transition-all duration-300 hover:scale-105"
-                 >
-                   <BoltIcon className="w-4 h-4 mr-2" />
-                   Contact Support
-                 </Button>
-               </div>
-             </div>
-           </Card>
-         </motion.div>
+
        </div>
      </div>
    );
