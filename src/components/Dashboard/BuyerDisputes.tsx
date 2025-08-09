@@ -14,7 +14,7 @@ import {
   EllipsisHorizontalIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 import SupportThread from './SupportThread';
 
 interface Dispute {
@@ -191,7 +191,7 @@ const getStatusText = (status: string) => {
 };
 
 const BuyerDisputes: React.FC = () => {
-  const { showSuccess, showInfo } = useToast();
+
   const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
   const [showSupportThread, setShowSupportThread] = useState(false);
   const [currentThreadDisputeId, setCurrentThreadDisputeId] = useState<string>('');
@@ -225,22 +225,22 @@ const BuyerDisputes: React.FC = () => {
     setIsRefreshing(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsRefreshing(false);
-    showSuccess('Disputes updated!');
+    alertUtils.success('Disputes updated!');
   };
 
   const handleCardSwipe = (dispute: Dispute, direction: 'left' | 'right') => {
     if (direction === 'left') {
       // Quick escalate
-      showInfo(`Escalating dispute ${dispute.caseNumber}...`);
+      alertUtils.info(`Escalating dispute ${dispute.caseNumber}...`);
     } else if (direction === 'right' && dispute.status === 'resolved') {
       // Quick mark as resolved
-      showSuccess(`Dispute ${dispute.caseNumber} marked as resolved!`);
+      alertUtils.success(`Dispute ${dispute.caseNumber} marked as resolved!`);
     }
   };
 
   const handleSendMessage = () => {
     if (messageText.trim()) {
-      showSuccess('Message sent!');
+      alertUtils.success('Message sent!');
       setMessageText('');
     }
   };
@@ -982,7 +982,7 @@ const BuyerDisputes: React.FC = () => {
                       onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     />
                     <button
-                      onClick={() => showInfo('Upload evidence...')}
+                      onClick={() => alertUtils.info('Upload evidence...')}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
                     >
                       <ArrowUpTrayIcon className="w-5 h-5" />
@@ -1001,7 +1001,7 @@ const BuyerDisputes: React.FC = () => {
                   <div className="mt-3">
                     <button
                       onClick={() => {
-                        showInfo('Escalating to human agent...');
+                        alertUtils.info('Escalating to human agent...');
                         setSelectedDispute(null);
                       }}
                       className="w-full py-2 text-yellow-400 text-sm font-medium hover:bg-yellow-500/10 rounded-lg transition-colors"

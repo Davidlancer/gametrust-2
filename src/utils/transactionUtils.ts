@@ -297,29 +297,21 @@ const getPaymentMethod = (transaction: Transaction): string => {
   return 'Platform Wallet';
 };
 
-// Toast notification utility
+import { alertUtils } from './alertMigration';
+
+// Toast notification utility using SimpleToast
 export const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-  // Create toast element
-  const toast = document.createElement('div');
-  toast.className = `fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white font-medium transition-all duration-300 transform translate-x-full ${
-    type === 'success' ? 'bg-green-500' :
-    type === 'error' ? 'bg-red-500' :
-    'bg-blue-500'
-  }`;
-  toast.textContent = message;
-  
-  document.body.appendChild(toast);
-  
-  // Animate in
-  setTimeout(() => {
-    toast.classList.remove('translate-x-full');
-  }, 100);
-  
-  // Animate out and remove
-  setTimeout(() => {
-    toast.classList.add('translate-x-full');
-    setTimeout(() => {
-      document.body.removeChild(toast);
-    }, 300);
-  }, 3000);
+  switch (type) {
+    case 'success':
+      alertUtils.success(message);
+      break;
+    case 'error':
+      alertUtils.error(message);
+      break;
+    case 'info':
+      alertUtils.info(message);
+      break;
+    default:
+      alertUtils.info(message);
+  }
 };

@@ -22,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
 import { BuyerDashboardPage } from '../../types/dashboard';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 import { useEscrow } from '../../hooks/useEscrow';
 import EscrowStatusCard from '../UI/EscrowStatusCard';
 
@@ -226,7 +226,7 @@ interface BuyerDashboardOverviewProps {
 }
 
 const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handlePageChange }) => {
-  const { showSuccess, showInfo, showError } = useToast();
+
   const { escrow: escrowData, updateEscrowStatus } = useEscrow();
   const [activityFilter, setActivityFilter] = useState('all');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -238,21 +238,21 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
   console.log('BuyerDashboardOverview - Escrow Status:', escrowData);
 
   const handleMarketplaceClick = () => {
-    showInfo('Marketplace', 'This would redirect to marketplace in a real app');
+    alertUtils.info('Marketplace - This would redirect to marketplace in a real app');
   };
 
   const handleFundWallet = () => {
-    showSuccess('Wallet Funding', 'Mock funding modal would open here');
+    alertUtils.success('Wallet Funding - Mock funding modal would open here');
     handlePageChange('wallet');
   };
 
   const handleReferralClick = () => {
-    showInfo('Referral Program', 'Opening referral dashboard...');
+    alertUtils.info('Referral Program - Opening referral dashboard...');
     handlePageChange('referral');
   };
 
   const handleSettingsClick = () => {
-    showInfo('Settings', 'Opening account settings...');
+    alertUtils.info('Settings - Opening account settings...');
     handlePageChange('settings');
   };
 
@@ -260,14 +260,13 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
     try {
       if (escrowData && updateEscrowStatus) {
         updateEscrowStatus('released');
-        showSuccess(
-          'Payment Released',
-          `₦${escrowAmount.toLocaleString()} has been released to the seller. Thank you for your purchase!`
+        alertUtils.success(
+          `Payment Released - ₦${escrowAmount.toLocaleString()} has been released to the seller. Thank you for your purchase!`
         );
       }
     } catch (error) {
       console.error('Error confirming delivery:', error);
-      showError('Error', 'Failed to confirm delivery. Please try again.');
+      alertUtils.error('Error - Failed to confirm delivery. Please try again.');
     }
   };
 
@@ -275,14 +274,13 @@ const BuyerDashboardOverview: React.FC<BuyerDashboardOverviewProps> = ({ handleP
     try {
       if (escrowData && updateEscrowStatus) {
         updateEscrowStatus('disputed');
-        showError(
-          'Dispute Raised',
-          'Your dispute has been submitted. Our support team will review it within 24 hours.'
+        alertUtils.error(
+          'Dispute Raised - Your dispute has been submitted. Our support team will review it within 24 hours.'
         );
       }
     } catch (error) {
       console.error('Error raising dispute:', error);
-      showError('Error', 'Failed to raise dispute. Please try again.');
+      alertUtils.error('Error - Failed to raise dispute. Please try again.');
     }
   };
   return (

@@ -20,7 +20,7 @@ import {
   UserIcon
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 
 interface ReferralStats {
   totalReferrals: number;
@@ -125,7 +125,7 @@ const BuyerReferral: React.FC<BuyerReferralProps> = ({ onNavigate }) => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [expandedReferral, setExpandedReferral] = useState<string | null>(null);
   const [animatedStats, setAnimatedStats] = useState({ referrals: 0, earnings: 0 });
-  const { showSuccess } = useToast();
+
   
   const referralLink = 'https://gametrust.ng/ref/blunt123';
   const referralCode = 'BLUNT123';
@@ -161,10 +161,7 @@ const BuyerReferral: React.FC<BuyerReferralProps> = ({ onNavigate }) => {
       document.body.removeChild(confetti);
     }, 1000);
     
-    showSuccess(
-      `${type} Copied! 🎉`, 
-      `Your referral ${type.toLowerCase()} is ready to share. Spread the word and earn rewards!`
-    );
+    alertUtils.success(`${type} Copied! 🎉 - Your referral ${type.toLowerCase()} is ready to share. Spread the word and earn rewards!`);
   };
   
   const shareOnWhatsApp = () => {
@@ -180,7 +177,7 @@ const BuyerReferral: React.FC<BuyerReferralProps> = ({ onNavigate }) => {
   const shareOnInstagram = () => {
     // Copy link for Instagram sharing
     copyToClipboard(referralLink, 'Link');
-    showSuccess('Link copied for Instagram!', 'Paste this link in your Instagram story or DM');
+    alertUtils.success('Link copied for Instagram! - Paste this link in your Instagram story or DM');
   };
 
   const badgeInfo = getBadgeInfo(mockStats.currentLevel);

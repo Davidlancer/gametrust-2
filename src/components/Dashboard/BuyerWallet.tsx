@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
 import Spinner from '../UI/Spinner';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 import { useEscrow } from '../../hooks/useEscrow';
 import EscrowStatusCard from '../UI/EscrowStatusCard';
 import TransactionDetailsModal from '../UI/TransactionDetailsModal';
@@ -157,7 +157,7 @@ const BuyerWalletSection: React.FC = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
 
-  const { showToast } = useToast();
+
 
   // Use escrow hook for buyer functionality
   const escrowHookResult = useEscrow();
@@ -197,7 +197,7 @@ const BuyerWalletSection: React.FC = () => {
 
   const handleFundWallet = async () => {
     if (!fundAmount || parseFloat(fundAmount) <= 0) {
-      showToast({ type: 'error', title: 'Invalid Amount', message: 'Please enter a valid amount' });
+      alertUtils.error('Please enter a valid amount');
       return;
     }
 
@@ -207,14 +207,14 @@ const BuyerWalletSection: React.FC = () => {
       const amount = parseFloat(fundAmount);
       // Payment method processing would go here
       
-      showToast({ type: 'success', title: 'Wallet Funded', message: `Successfully added ₦${amount.toLocaleString()} to your wallet` });
+      alertUtils.success(`Successfully added ₦${amount.toLocaleString()} to your wallet`);
       
       setShowFundModal(false);
       setFundAmount('');
       setPaymentMethod('bank_transfer');
     } catch (error) {
       console.error('Fund wallet error:', error);
-      showToast({ type: 'error', title: 'Funding Failed', message: 'Failed to fund wallet. Please try again.' });
+      alertUtils.error('Failed to fund wallet. Please try again.');
     } finally {
       setIsLoading(false);
     }

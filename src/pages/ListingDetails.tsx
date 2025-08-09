@@ -25,7 +25,7 @@ import PaymentSuccessModal from '../components/UI/PaymentSuccessModal';
 import ChatPopup from '../components/UI/ChatPopup';
 import { featuredListings } from '../data/mockData';
 import { useEscrow } from '../hooks/useEscrow';
-import { useToast } from '../components/UI/ToastProvider';
+import { alertUtils } from '../utils/alertMigration';
 
 interface ListingDetailsProps {
   listingId?: string;
@@ -41,7 +41,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
   const [showChatPopup, setShowChatPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { createEscrowTransaction, escrow } = useEscrow();
-  const { showError } = useToast();
+
 
   // Mock data - in real app, fetch from API
   const listing = featuredListings.find(l => l.id === listingId) || featuredListings[0];
@@ -71,7 +71,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
       // Check if user is authenticated (in a real app, this would be from auth context)
       const mockUser = JSON.parse(localStorage.getItem('mockUser') || '{}');
       if (!mockUser.isAuthenticated) {
-        showError('Authentication Required', 'Please log in to purchase this account.');
+        alertUtils.error('Please log in to purchase this account.');
         onNavigate('auth');
         return;
       }
@@ -97,7 +97,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
       
     } catch (error) {
       console.error('Error creating escrow:', error);
-      showError('Purchase Failed', 'There was an error processing your purchase. Please try again.');
+      alertUtils.error('There was an error processing your purchase. Please try again.');
     }
   };
 
@@ -106,7 +106,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
       // Check if user is authenticated
       const mockUser = JSON.parse(localStorage.getItem('mockUser') || '{}');
       if (!mockUser.isAuthenticated) {
-        showError('Authentication Required', 'Please log in to chat with the seller.');
+        alertUtils.error('Please log in to chat with the seller.');
         onNavigate('auth');
         return;
       }
@@ -116,7 +116,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
       
     } catch (error) {
       console.error('Error opening chat:', error);
-      showError('Chat Failed', 'There was an error opening the chat. Please try again.');
+      alertUtils.error('There was an error opening the chat. Please try again.');
     }
   };
 

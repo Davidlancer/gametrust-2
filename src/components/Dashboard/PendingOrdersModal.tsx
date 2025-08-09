@@ -16,7 +16,7 @@ import {
 import { CheckCircleIcon as CheckCircleIconSolid } from '@heroicons/react/24/solid';
 import Button from '../UI/Button';
 import ChatModal from '../UI/ChatModal';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 
 interface PendingOrder {
   id: string;
@@ -215,7 +215,7 @@ const PendingOrdersModal: React.FC<PendingOrdersModalProps> = ({ isOpen, onClose
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [chatModal, setChatModal] = useState<string | null>(null);
   const [emergencyModal, setEmergencyModal] = useState<string | null>(null);
-  const { showSuccess, showWarning } = useToast();
+
 
   // Filter orders based on search query
   const filteredOrders = orders.filter(order => 
@@ -255,14 +255,14 @@ const PendingOrdersModal: React.FC<PendingOrdersModalProps> = ({ isOpen, onClose
           }
         : order
     ));
-    showSuccess('Account marked as delivered! Buyer will be notified.');
-  }, [showSuccess]);
+    alertUtils.success('Account marked as delivered! Buyer will be notified');
+  }, []);
 
   const handleInitiateDispute = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    showWarning('Dispute initiated. Our support team will review within 2 hours.');
-  }, [showWarning]);
+    alertUtils.warning('Dispute initiated. Our support team will review within 2 hours.');
+  }, []);
 
   const handleEmergencySupport = useCallback((e: React.MouseEvent, orderId: string) => {
     e.preventDefault();
@@ -725,7 +725,7 @@ const PendingOrdersModal: React.FC<PendingOrdersModalProps> = ({ isOpen, onClose
              otherUser={otherUser}
              onSendMessage={(message) => {
                console.log('Message sent:', message);
-               showSuccess('Message sent successfully!');
+               alertUtils.success('Message sent successfully!');
              }}
            />
          );
@@ -770,7 +770,7 @@ const PendingOrdersModal: React.FC<PendingOrdersModalProps> = ({ isOpen, onClose
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        showSuccess('Emergency support request sent! We\'ll contact you shortly.');
+                        alertUtils.success('Emergency support request sent! We\'ll contact you shortly.');
                         setEmergencyModal(null);
                       }}
                       className="w-full bg-red-600 hover:bg-red-700 border-red-500 transition-all duration-200 ease-in-out"

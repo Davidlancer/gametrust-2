@@ -10,7 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Modal from './Modal';
 import Button from './Button';
-import { useToast } from './ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 
 interface Order {
   id: string;
@@ -49,7 +49,7 @@ const DisputeModal: React.FC<DisputeModalProps> = ({
   order,
   onDisputeSubmitted
 }) => {
-  const { showSuccess } = useToast();
+
   const [selectedReason, setSelectedReason] = useState('');
   const [otherReason, setOtherReason] = useState('');
   const [explanation, setExplanation] = useState('');
@@ -141,8 +141,7 @@ const DisputeModal: React.FC<DisputeModalProps> = ({
     const existingDisputes = JSON.parse(localStorage.getItem('disputes') || '[]');
     localStorage.setItem('disputes', JSON.stringify([...existingDisputes, dispute]));
     
-    showSuccess(
-      'Dispute Submitted!',
+    alertUtils.success(
       "We'll get back to you within 24 hours."
     );
     

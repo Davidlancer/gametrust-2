@@ -10,7 +10,6 @@ import {
   GiftIcon,
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
-import { useToast } from './ToastProvider';
 import { notificationService } from '../../services/notificationService';
 
 interface RoleSwitcherProps {
@@ -28,7 +27,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ onNavigate, onLogout, curre
   const [hasMultipleRoles, setHasMultipleRoles] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { } = useToast();
+
 
   // Check if component should be visible (not on auth/onboarding pages)
   const shouldShowSwitcher = () => {

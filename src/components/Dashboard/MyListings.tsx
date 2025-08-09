@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Skeleton } from '@heroui/react';
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -15,7 +16,7 @@ import {
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Modal from '../UI/Modal';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 import { TrendingUpIcon } from 'lucide-react';
 
 interface Listing {
@@ -141,6 +142,7 @@ const promotionPlans: PromotionPlan[] = [
 
 const MyListings: React.FC = () => {
   const [listings, setListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [filter, setFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -162,32 +164,43 @@ const MyListings: React.FC = () => {
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [walletBalance, setWalletBalance] = useState<number>(0);
   
-  const { showSuccess, showError } = useToast();
+
   
   // Load listings from localStorage on mount
   useEffect(() => {
-    const savedListings = localStorage.getItem('listings');
-    if (savedListings) {
-      try {
-        setListings(JSON.parse(savedListings));
-      } catch (error) {
-        console.error('Error parsing saved listings:', error);
+    const loadData = async () => {
+      setIsLoading(true);
+      
+      // Simulate loading delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const savedListings = localStorage.getItem('listings');
+      if (savedListings) {
+        try {
+          setListings(JSON.parse(savedListings));
+        } catch (error) {
+          console.error('Error parsing saved listings:', error);
+          setListings(mockListings);
+        }
+      } else {
         setListings(mockListings);
       }
-    } else {
-      setListings(mockListings);
-    }
+      
+      // Load wallet balance
+      const savedBalance = localStorage.getItem('walletBalance');
+      if (savedBalance) {
+        setWalletBalance(parseFloat(savedBalance));
+      } else {
+        // Set initial mock balance
+        const initialBalance = 5000;
+        setWalletBalance(initialBalance);
+        localStorage.setItem('walletBalance', initialBalance.toString());
+      }
+      
+      setIsLoading(false);
+    };
     
-    // Load wallet balance
-    const savedBalance = localStorage.getItem('walletBalance');
-    if (savedBalance) {
-      setWalletBalance(parseFloat(savedBalance));
-    } else {
-      // Set initial mock balance
-      const initialBalance = 5000;
-      setWalletBalance(initialBalance);
-      localStorage.setItem('walletBalance', initialBalance.toString());
-    }
+    loadData();
   }, []);
   
   // Save listings to localStorage whenever listings change
@@ -236,7 +249,7 @@ const MyListings: React.FC = () => {
     if (!editModal.listing) return;
     
     if (editForm.price <= 0) {
-      showError('Validation Error', 'Price must be greater than 0');
+      alertUtils.error('Validation Error', 'Price must be greater than 0');
       return;
     }
 
@@ -253,7 +266,7 @@ const MyListings: React.FC = () => {
     ));
     
     setEditModal({ isOpen: false, listing: null });
-    showSuccess('Success', 'Listing updated successfully!');
+    alertUtils.success('Success', 'Listing updated successfully!');
   };
 
   // Copy listing handler
@@ -268,7 +281,7 @@ const MyListings: React.FC = () => {
     };
     
     setListings(prev => [copiedListing, ...prev]);
-    showSuccess('Success', 'Listing copied successfully!');
+    alertUtils.success('Success', 'Listing copied successfully!');
   };
 
   // Delete listing handlers
@@ -281,7 +294,7 @@ const MyListings: React.FC = () => {
     
     setListings(prev => prev.filter(listing => listing.id !== deleteModal.listing!.id));
     setDeleteModal({ isOpen: false, listing: null });
-    showSuccess('Success', 'Listing deleted successfully!');
+    alertUtils.success('Success', 'Listing deleted successfully!');
   };
 
   // Promotion handlers
@@ -289,7 +302,7 @@ const MyListings: React.FC = () => {
     if (listing.promoted && listing.promotionExpiry) {
       const expiryDate = new Date(listing.promotionExpiry);
       if (expiryDate > new Date()) {
-        showError('Error', `This listing is already promoted until ${expiryDate.toLocaleDateString()}.`);
+        alertUtils.error('Error', `This listing is already promoted until ${expiryDate.toLocaleDateString()}.`);
         return;
       }
     }
@@ -305,7 +318,7 @@ const MyListings: React.FC = () => {
     if (!selectedPlan) return;
     
     if (walletBalance < selectedPlan.price) {
-      showError('Error', 'Insufficient wallet balance. Please top up your wallet.');
+      alertUtils.error('Error', 'Insufficient wallet balance. Please top up your wallet.');
       return;
     }
     
@@ -329,7 +342,7 @@ const MyListings: React.FC = () => {
     setWalletBalance(prev => prev - selectedPlan.price);
     
     setPromoteModal({ isOpen: false, listing: null });
-    showSuccess('Success', `✅ Listing promoted for ${selectedPlan.duration} day${selectedPlan.duration > 1 ? 's' : ''}!`);
+    alertUtils.success('Success', `✅ Listing promoted for ${selectedPlan.duration} day${selectedPlan.duration > 1 ? 's' : ''}!`);
   };
 
   return (
@@ -402,7 +415,29 @@ const MyListings: React.FC = () => {
       {/* Listings Grid */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {filteredListings.map((listing, index) => (
+          {isLoading ? (
+            // Skeleton loading for grid view
+            Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index} className="h-full overflow-hidden">
+                <div className="space-y-3">
+                  <Skeleton className="w-full h-40 md:h-48 rounded-lg" />
+                  <div className="space-y-2">
+                    <Skeleton className="w-3/4 h-5" />
+                    <Skeleton className="w-1/2 h-4" />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <Skeleton className="w-20 h-6" />
+                    <Skeleton className="w-16 h-4" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-700">
+                    <Skeleton className="h-9" />
+                    <Skeleton className="h-9" />
+                  </div>
+                </div>
+              </Card>
+            ))
+          ) : (
+            filteredListings.map((listing, index) => (
             <motion.div
               key={listing.id}
               initial={{ opacity: 0, y: 20 }}
@@ -528,14 +563,43 @@ const MyListings: React.FC = () => {
                 </div>
               </Card>
             </motion.div>
-          ))}
+            ))
+          )}
         </div>
       ) : (
         /* Table View - Mobile optimized */
         <div>
           {/* Mobile Card View (hidden on md+) */}
           <div className="md:hidden space-y-3">
-            {filteredListings.map((listing, index) => (
+            {isLoading ? (
+              // Skeleton loading for mobile card view
+              Array.from({ length: 4 }).map((_, index) => (
+                <Card key={index} className="p-4">
+                  <div className="flex space-x-3">
+                    <Skeleton className="w-16 h-16 rounded-lg flex-shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 space-y-1">
+                          <Skeleton className="w-3/4 h-4" />
+                          <Skeleton className="w-1/2 h-3" />
+                        </div>
+                        <Skeleton className="w-12 h-5 ml-2" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="w-20 h-5" />
+                        <Skeleton className="w-24 h-3" />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Skeleton className="w-12 h-6" />
+                        <Skeleton className="w-12 h-6" />
+                        <Skeleton className="w-12 h-6" />
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              filteredListings.map((listing, index) => (
               <motion.div
                 key={listing.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -603,7 +667,8 @@ const MyListings: React.FC = () => {
                   </div>
                 </Card>
               </motion.div>
-            ))}
+              ))
+            )}
           </div>
           
           {/* Desktop Table View (hidden on mobile) */}
@@ -622,7 +687,45 @@ const MyListings: React.FC = () => {
                   </tr>
                 </thead>
               <tbody>
-                {filteredListings.map((listing, index) => (
+                {isLoading ? (
+                  // Skeleton loading for desktop table view
+                  Array.from({ length: 4 }).map((_, index) => (
+                    <tr key={index} className="border-b border-gray-800">
+                      <td className="py-4 px-4">
+                        <div className="flex items-center space-x-3">
+                          <Skeleton className="w-12 h-12 rounded-lg" />
+                          <div className="space-y-1">
+                            <Skeleton className="w-32 h-4" />
+                            <Skeleton className="w-16 h-3" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <Skeleton className="w-24 h-4" />
+                      </td>
+                      <td className="py-4 px-4">
+                        <Skeleton className="w-20 h-4" />
+                      </td>
+                      <td className="py-4 px-4">
+                        <Skeleton className="w-16 h-6 rounded-full" />
+                      </td>
+                      <td className="py-4 px-4">
+                        <Skeleton className="w-12 h-4" />
+                      </td>
+                      <td className="py-4 px-4">
+                        <Skeleton className="w-20 h-4" />
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center space-x-2">
+                          <Skeleton className="w-8 h-8 rounded" />
+                          <Skeleton className="w-8 h-8 rounded" />
+                          <Skeleton className="w-8 h-8 rounded" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  filteredListings.map((listing, index) => (
                   <motion.tr
                     key={listing.id}
                     initial={{ opacity: 0 }}
@@ -713,7 +816,8 @@ const MyListings: React.FC = () => {
                       </div>
                     </td>
                   </motion.tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -721,7 +825,7 @@ const MyListings: React.FC = () => {
         </div>
       )}
 
-      {filteredListings.length === 0 && (
+      {filteredListings.length === 0 && !isLoading && (
         <Card>
           <div className="text-center py-8 md:py-12 px-4">
             <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">

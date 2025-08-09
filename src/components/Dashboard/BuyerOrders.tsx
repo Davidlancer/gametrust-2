@@ -22,7 +22,7 @@ import {
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 import DisputeModal from '../UI/DisputeModal';
 import ChatModal from '../UI/ChatModal';
 
@@ -160,7 +160,7 @@ const BuyerOrders: React.FC = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const { showSuccess } = useToast();
+
 
   const openChat = (orderId: string) => {
     setChatOrderId(orderId);
@@ -201,8 +201,7 @@ const BuyerOrders: React.FC = () => {
 
   const handleConfirmAccess = (orderId: string) => {
     const order = mockOrders.find(o => o.id === orderId);
-    showSuccess(
-      'Access Confirmed!',
+    alertUtils.success(
       `Successfully confirmed access for ${order?.accountTitle} account. Escrow funds have been released to the seller.`
     );
     setSelectedOrder(null);

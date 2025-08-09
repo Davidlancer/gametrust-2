@@ -11,7 +11,7 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import Button from '../UI/Button';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 
 interface SupportMessage {
   id: string;
@@ -149,7 +149,7 @@ const SupportThread: React.FC<SupportThreadProps> = ({ disputeId, isOpen, onClos
   const [isLoading, setIsLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { showSuccess } = useToast();
+
 
   // Fetch messages when component mounts or disputeId changes
   useEffect(() => {
@@ -186,7 +186,7 @@ const SupportThread: React.FC<SupportThreadProps> = ({ disputeId, isOpen, onClos
 
     setMessages(prev => [...prev, message]);
     setNewMessage('');
-    showSuccess('Message sent successfully!');
+    alertUtils.success('Message sent successfully!');
 
     // Simulate support response
     setIsTyping(true);
@@ -206,7 +206,7 @@ const SupportThread: React.FC<SupportThreadProps> = ({ disputeId, isOpen, onClos
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      showSuccess(`${files.length} file(s) uploaded successfully!`);
+      alertUtils.success(`${files.length} file(s) uploaded successfully!`);
       // Here you would typically upload the files to your server
     }
   };

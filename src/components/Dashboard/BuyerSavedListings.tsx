@@ -21,7 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon, SparklesIcon, BookmarkIcon as BookmarkSolidIcon } from '@heroicons/react/24/solid';
 import Button from '../UI/Button';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 
 interface SavedListing {
   id: string;
@@ -641,7 +641,7 @@ const SmartSidebar: React.FC<SmartSidebarProps> = ({
   setSortBy,
   onClearAll
 }) => {
-  const { showToast } = useToast();
+
   
   const stats = {
     total: listings.length,
@@ -772,11 +772,7 @@ const SmartSidebar: React.FC<SmartSidebarProps> = ({
           variant="outline"
           onClick={() => {
             onClearAll();
-            showToast({ 
-              title: 'Vault Cleared', 
-              message: 'All items have been removed from your vault', 
-              type: 'success' 
-            });
+            alertUtils.success('Vault Cleared', 'All items have been removed from your vault');
           }}
           className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
         >
@@ -828,7 +824,7 @@ class SavedListingsErrorBoundary extends Component<
 }
 
 const BuyerSavedListingsContent: React.FC = () => {
-  const { showToast } = useToast();
+
   const [listings, setListings] = useState<SavedListing[]>(() => {
     try {
       return mockSavedListings.map(listing => ({
@@ -890,11 +886,11 @@ const BuyerSavedListingsContent: React.FC = () => {
     
     setListings(prev => prev.filter(listing => listing.id !== listingId));
     setRemovingId(null);
-    showToast({ title: 'Removed', message: 'Item removed from saved listings', type: 'success' });
+    alertUtils.success('Removed', 'Item removed from saved listings');
   };
 
   const handleBuyNow = (listing: SavedListing) => {
-    showToast({ title: 'Added to Cart', message: `${listing.title} added to cart`, type: 'success' });
+    alertUtils.success('Added to Cart', `${listing.title} added to cart`);
   };
 
   // Safe filtering with null checks

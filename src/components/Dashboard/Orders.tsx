@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
-  XMarkIcon,
   ClockIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -12,14 +11,13 @@ import {
   FlagIcon,
   CalendarIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
 import ChatModal from '../UI/ChatModal';
-import { useToast } from '../UI/ToastProvider';
+
 
 interface Order {
   id: string;
@@ -173,7 +171,7 @@ const Orders: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [chatOrderId, setChatOrderId] = useState<string>('');
-  const { showSuccess, showError, showWarning } = useToast();
+
 
   const openChat = (orderId: string) => {
     setChatOrderId(orderId);
@@ -489,6 +487,12 @@ const Orders: React.FC = () => {
         isOpen={chatModalOpen}
         onClose={() => setChatModalOpen(false)}
         orderId={chatOrderId}
+        userRole="seller"
+        otherUser={{
+           id: orders.find(order => order.id === chatOrderId)?.buyerUsername || 'buyer',
+           username: orders.find(order => order.id === chatOrderId)?.buyerUsername || 'Buyer',
+           avatar: orders.find(order => order.id === chatOrderId)?.buyerAvatar || ''
+         }}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useToast } from './ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 import { notificationService } from '../../services/notificationService';
 import { useNotifications } from '../../hooks/useNotifications';
 
@@ -8,32 +8,32 @@ interface NotificationServiceProviderProps {
 }
 
 const NotificationServiceProvider: React.FC<NotificationServiceProviderProps> = ({ children }) => {
-  const { showSuccess, showError, showWarning, showInfo } = useToast();
   const { addNotification } = useNotifications();
 
   useEffect(() => {
     // Initialize the notification service with toast callbacks
     const showToast = (type: string, title: string, message: string) => {
+      const fullMessage = message ? `${title}: ${message}` : title;
       switch (type) {
         case 'success':
-          showSuccess(title, message);
+          alertUtils.success(fullMessage);
           break;
         case 'error':
-          showError(title, message);
+          alertUtils.error(fullMessage);
           break;
         case 'warning':
-          showWarning(title, message);
+          alertUtils.warning(fullMessage);
           break;
         case 'info':
-          showInfo(title, message);
+          alertUtils.info(fullMessage);
           break;
         default:
-          showInfo(title, message);
+          alertUtils.info(fullMessage);
       }
     };
 
     notificationService.setCallbacks(addNotification, showToast);
-  }, [addNotification, showSuccess, showError, showWarning, showInfo]);
+  }, [addNotification]);
 
   return <>{children}</>;
 };

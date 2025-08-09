@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Skeleton } from '@heroui/react';
 import {
   HomeIcon,
   ShoppingBagIcon,

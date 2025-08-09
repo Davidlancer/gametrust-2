@@ -1,31 +1,12 @@
-/** @type {import('tailwindcss').Config} */
+import { heroui } from "@heroui/react";
+
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  theme: {
-    extend: {
-      // Custom scrollbar utilities
-      scrollbar: {
-        'none': {
-          'scrollbar-width': 'none',
-          '-ms-overflow-style': 'none',
-          '&::-webkit-scrollbar': {
-            display: 'none'
-          }
-        }
-      }
-    },
-  },
-  plugins: [
-    function({ addUtilities }) {
-      addUtilities({
-        '.scrollbar-none': {
-          'scrollbar-width': 'none',
-          '-ms-overflow-style': 'none',
-          '&::-webkit-scrollbar': {
-            display: 'none'
-          }
-        }
-      })
-    }
+  content: [
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@heroui/react/dist/**/*.{js,ts,jsx,tsx}"
   ],
+  theme: {
+    extend: {},
+  },
+  plugins: [heroui()],
 };

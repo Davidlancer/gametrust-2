@@ -29,7 +29,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import Button from '../UI/Button';
-import { useToast } from '../UI/ToastProvider';
+import { alertUtils } from '../../utils/alertMigration';
 
 interface UserProfile {
   firstName: string;
@@ -142,7 +142,7 @@ const mockConnectedAccounts: ConnectedAccount[] = [
 ];
 
 const BuyerSettings: React.FC = () => {
-  const { showSuccess, showError, showInfo } = useToast();
+
   const [activeSection, setActiveSection] = useState('account');
   const [profile, setProfile] = useState(mockProfile);
   const [security, setSecurity] = useState(mockSecurity);
@@ -179,9 +179,9 @@ const BuyerSettings: React.FC = () => {
   const handleSave = async (section: string) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 800));
-      showSuccess(`${section} updated successfully!`);
+      alertUtils.success(`${section} updated successfully!`);
     } catch {
-      showError(`Failed to update ${section}. Please try again.`);
+      alertUtils.error(`Failed to update ${section}. Please try again.`);
     }
   };
 
@@ -193,7 +193,7 @@ const BuyerSettings: React.FC = () => {
     const file = event.target.files?.[0];
     if (file) {
       // Simulate upload
-      showInfo('Avatar upload feature coming soon!');
+      alertUtils.info('Avatar upload feature coming soon!');
     }
   };
 
@@ -715,7 +715,7 @@ const BuyerSettings: React.FC = () => {
             whileTap={{ scale: 0.95 }}
             onClick={() => {
               setSecurity(prev => ({ ...prev, twoFactorEnabled: !prev.twoFactorEnabled }));
-              showSuccess(security.twoFactorEnabled ? '2FA disabled' : '2FA enabled');
+              alertUtils.success(security.twoFactorEnabled ? '2FA disabled' : '2FA enabled');
             }}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
               security.twoFactorEnabled ? 'bg-green-500' : 'bg-gray-600'
@@ -839,7 +839,7 @@ const BuyerSettings: React.FC = () => {
           </div>
           <div className="max-md:flex max-md:justify-center max-md:w-full">
             <Button
-              onClick={() => showInfo('Logged out from all devices')}
+              onClick={() => alertUtils.info('Logged out from all devices')}
               className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors md:px-4 md:py-2 max-md:px-3 max-md:py-2 max-md:text-sm max-md:w-auto max-md:min-w-[120px]"
             >
               Log Out All
@@ -1096,7 +1096,7 @@ const BuyerSettings: React.FC = () => {
                     whileTap={{ scale: 0.95 }}
                     onClick={() => {
                       setPaymentMethods(prev => prev.map(p => ({ ...p, isDefault: p.id === method.id })));
-                      showSuccess('Default payment method updated');
+                      alertUtils.success('Default payment method updated');
                     }}
                     className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors"
                   >
@@ -1108,7 +1108,7 @@ const BuyerSettings: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
                     setPaymentMethods(prev => prev.filter(p => p.id !== method.id));
-                    showSuccess('Payment method removed');
+                    alertUtils.success('Payment method removed');
                   }}
                   className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
                 >
@@ -1185,7 +1185,7 @@ const BuyerSettings: React.FC = () => {
                   <Button
                     onClick={() => {
                       setShowAddCard(false);
-                      showSuccess('Payment method added successfully!');
+                      alertUtils.success('Payment method added successfully!');
                     }}
                     className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-lg transition-colors"
                   >
@@ -1257,7 +1257,7 @@ const BuyerSettings: React.FC = () => {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => showInfo(`Syncing ${account.platform} account...`)}
+                      onClick={() => alertUtils.info(`Syncing ${account.platform} account...`)}
                       className="px-3 py-1 max-md:px-4 max-md:py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs max-md:text-sm rounded-lg transition-colors flex items-center space-x-1 max-md:min-w-[80px] max-md:justify-center"
                     >
                       <WifiIcon className="w-3 h-3 max-md:w-4 max-md:h-4" />
@@ -1270,7 +1270,7 @@ const BuyerSettings: React.FC = () => {
                         setConnectedAccounts(prev => prev.map(a => 
                           a.id === account.id ? { ...a, connected: false, username: '', lastSync: 'Never' } : a
                         ));
-                        showSuccess(`${account.platform} account disconnected`);
+                        alertUtils.success(`${account.platform} account disconnected`);
                       }}
                       className="px-3 py-1 max-md:px-4 max-md:py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs max-md:text-sm rounded-lg transition-colors max-md:min-w-[100px] max-md:justify-center max-md:flex max-md:items-center"
                     >
@@ -1290,7 +1290,7 @@ const BuyerSettings: React.FC = () => {
                           lastSync: 'Just now' 
                         } : a
                       ));
-                      showSuccess(`${account.platform} account connected`);
+                      alertUtils.success(`${account.platform} account connected`);
                     }}
                     className="px-4 py-2 max-md:px-6 max-md:py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-sm max-md:text-sm rounded-lg transition-colors flex items-center space-x-2 max-md:min-w-[120px] max-md:justify-center"
                   >
@@ -1332,7 +1332,7 @@ const BuyerSettings: React.FC = () => {
                 <p className="text-gray-400 text-sm">Temporarily disable your account. You can reactivate it later.</p>
               </div>
               <Button
-                onClick={() => showInfo('Account deactivation feature coming soon')}
+                onClick={() => alertUtils.info('Account deactivation feature coming soon')}
                 className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Deactivate
@@ -1384,7 +1384,7 @@ const BuyerSettings: React.FC = () => {
                     </div>
                     <div className="flex space-x-3">
                       <Button
-                        onClick={() => showError('Account deletion is not available in demo mode')}
+                        onClick={() => alertUtils.error('Account deletion is not available in demo mode')}
                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
                       >
                         Confirm Delete

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Skeleton } from '@heroui/react';
 import {
   FireIcon,
   CheckCircleIcon,

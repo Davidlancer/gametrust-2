@@ -18,19 +18,18 @@ import {
   CalendarIcon
 } from '@heroicons/react/24/outline';
 
-// Toast notification function
+import { alertUtils } from '../../utils/alertMigration';
+
+// Toast notification function using SimpleToast
 const toast = {
   success: (message: string) => {
-    console.log('✅ SUCCESS:', message);
-    alert('✅ ' + message);
+    alertUtils.success(message);
   },
   error: (message: string) => {
-    console.log('❌ ERROR:', message);
-    alert('❌ ' + message);
+    alertUtils.error(message);
   },
   info: (message: string) => {
-    console.log('ℹ️ INFO:', message);
-    alert('ℹ️ ' + message);
+    alertUtils.info(message);
   }
 };
 

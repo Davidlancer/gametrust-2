@@ -26,8 +26,10 @@ import Faq from './pages/Faq';
 import Pricing from './pages/Pricing';
 import BuyerProtection from './pages/BuyerProtection';
 import Community from './pages/Community';
+import AlertDemo from './pages/AlertDemo';
+import ToastTest from './components/ToastTest';
 import { AlertTriangle } from 'lucide-react';
-import ToastProvider from './components/UI/ToastProvider';
+
 import RoleSwitcher from './components/UI/RoleSwitcher';
 import NotificationDevTools, { DevModeToggle } from './components/UI/NotificationDevTools';
 import NotificationServiceProvider from './components/UI/NotificationServiceProvider';
@@ -36,9 +38,13 @@ import PageTransition from './components/UI/PageTransition';
 import LoadingBar from './components/UI/LoadingBar';
 import LoadingScreen from './components/UI/LoadingScreen';
 import { LoadingProvider } from './context/LoadingContext';
+import { AlertProvider } from './components/UI/AlertSystem';
+import { useSimpleToast } from './components/UI/SimpleToast';
+import { setGlobalToastManager } from './utils/alertMigration';
 import './utils/testRoleSwitcher'; // Load test utilities
+import './utils/alertMigration'; // Load alert migration utilities
 
-type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'seller-dashboard' | 'buyer-dashboard' | 'onboarding' | 'referral-program' | 'admin-dashboard' | 'admin-login' | 'support/help-center' | 'support/safety-guidelines' | 'support/contact-us' | 'support/terms-of-service' | 'platform/marketplace' | 'platform/start-selling' | 'platform/how-it-works' | 'platform/verification' | 'faq' | 'pricing' | 'buyer-protection' | 'community';
+type Page = 'home' | 'marketplace' | 'sell' | 'auth' | 'platforms' | 'listing-details' | 'seller-profile' | 'seller-dashboard' | 'buyer-dashboard' | 'onboarding' | 'referral-program' | 'admin-dashboard' | 'admin-login' | 'support/help-center' | 'support/safety-guidelines' | 'support/contact-us' | 'support/terms-of-service' | 'platform/marketplace' | 'platform/start-selling' | 'platform/how-it-works' | 'platform/verification' | 'faq' | 'pricing' | 'buyer-protection' | 'community' | 'alert-demo' | 'toast-test';
 
 interface OnboardingData {
   roles: string[];
@@ -57,6 +63,14 @@ function App() {
   const [devMode] = useState<boolean>(true); // Testing mode toggle
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  
+  // Initialize global toast system
+  const { addToast, ToastContainer } = useSimpleToast();
+  
+  // Set up global toast manager
+  React.useEffect(() => {
+    setGlobalToastManager({ addToast });
+  }, [addToast]);
 
   // Initialize mock user for escrow functionality
   useEffect(() => {
@@ -293,6 +307,10 @@ function App() {
         return <BuyerProtection onNavigate={handleNavigate} />;
       case 'community':
         return <Community onNavigate={handleNavigate} />;
+      case 'alert-demo':
+        return <AlertDemo />;
+      case 'toast-test':
+        return <ToastTest />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }
@@ -334,9 +352,10 @@ function App() {
   return (
     <LoadingProvider>
     <ActivityLogProvider>
-      <ToastProvider>
-        <NotificationServiceProvider>
+      <AlertProvider>
+          <NotificationServiceProvider>
         <div className="min-h-screen bg-gray-900 text-white overflow-x-hidden">
+          <ToastContainer />
           {isInitialLoading ? (
             <LoadingScreen message="Initializing GameTrust..." />
           ) : (
@@ -384,8 +403,8 @@ function App() {
             </>
           )}
         </div>
-        </NotificationServiceProvider>
-      </ToastProvider>
+          </NotificationServiceProvider>
+      </AlertProvider>
     </ActivityLogProvider>
     </LoadingProvider>
   );

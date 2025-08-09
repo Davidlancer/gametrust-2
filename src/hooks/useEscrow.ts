@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useToast } from '../components/UI/ToastProvider';
+import { alertUtils } from '../utils/alertMigration';
 import { notificationService } from '../services/notificationService';
 
 export interface EscrowTransaction {
@@ -73,23 +73,7 @@ export const useEscrow = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Safe toast access with fallback
-  let toastHandlers = { 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    showSuccess: (_title: string, _message?: string) => {}, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    showError: (_title: string, _message?: string) => {}, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    showInfo: (_title: string, _message?: string) => {} 
-  };
-  try {
-    const toast = useToast();
-    toastHandlers = toast;
-  } catch {
-    console.warn('Toast provider not available, using fallback handlers');
-  }
-  
-  const { showSuccess, showError, showInfo } = toastHandlers;
+  // Use alertUtils directly for notifications
 
   // Load escrow data from localStorage on mount with comprehensive error handling
   useEffect(() => {
@@ -182,7 +166,7 @@ export const useEscrow = () => {
       setError(null);
       
       try {
-        showSuccess('Payment Held in Escrow', 'The payment has been secured. You\'ll be notified once the seller confirms delivery.');
+        alertUtils.success('Payment Held in Escrow - The payment has been secured. You\'ll be notified once the seller confirms delivery.');
       } catch (toastError) {
         console.warn('Failed to show success toast:', toastError);
       }
@@ -246,13 +230,13 @@ export const useEscrow = () => {
       try {
         switch (status) {
           case 'released':
-            showSuccess('Payment Released', 'Payment has been released to the seller.');
+            alertUtils.success('Payment Released - Payment has been released to the seller.');
             break;
           case 'disputed':
-            showError('Dispute Raised', reason || 'A dispute has been raised for this transaction.');
+            alertUtils.error(`Dispute Raised - ${reason || 'A dispute has been raised for this transaction.'}`);
             break;
           case 'refunded':
-            showInfo('Payment Refunded', 'Your payment has been refunded.');
+            alertUtils.info('Payment Refunded - Your payment has been refunded.');
             break;
         }
       } catch (toastError) {
@@ -310,7 +294,7 @@ export const useEscrow = () => {
       setError(null);
       
       try {
-        showInfo('Escrow Cleared', 'Escrow transaction has been cleared.');
+        alertUtils.info('Escrow Cleared - Escrow transaction has been cleared.');
       } catch (toastError) {
         console.warn('Failed to show clear escrow toast:', toastError);
       }
