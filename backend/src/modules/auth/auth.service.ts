@@ -147,20 +147,20 @@ export class AuthService {
     return await prisma.user.findUnique({
       where: { id },
       include: {
-        profile: true
+        profile: true,
       },
-      ...(includePassword ? {} : {
-        select: {
-          id: true,
-          email: true,
-          isEmailVerified: true,
-          isActive: true,
-          lastLoginAt: true,
-          createdAt: true,
-          updatedAt: true,
-          profile: true
-        }
-      })
+      // ...(includePassword ? {} : {
+      //   select: {
+      //     id: true,
+      //     email: true,
+      //     isEmailVerified: true,
+      //     isActive: true,
+      //     lastLoginAt: true,
+      //     createdAt: true,
+      //     updatedAt: true,
+      //     profile: true
+      //   }
+      // })
     });
   }
 
