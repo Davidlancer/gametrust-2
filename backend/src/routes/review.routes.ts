@@ -1,27 +1,55 @@
 import { Router, Request, Response } from 'express';
 import { ApiResponse } from '../types';
 import { authenticate } from '../modules/auth/auth.middleware';
-import { Review } from '../models/review.model';
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 const router = Router();
 
 // GET /api/reviews - Get all reviews
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const reviews = await Review.find({})
-      .populate('userId', 'username avatar')
-      .populate('productId', 'title')
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const reviews = await prisma.review.findMany({
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true,
+                avatar: true
+              }
+            }
+          }
+        },
+        purchase: {
+          include: {
+            listing: {
+              select: {
+                title: true,
+                game: {
+                  select: {
+                    name: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
 
     const formattedReviews = reviews.map(review => ({
-      id: review._id,
-      buyerUsername: (review.userId as { username?: string })?.username || 'Anonymous',
-      buyerAvatar: (review.userId as { avatar?: string })?.avatar || null,
+      id: review.id,
+      buyerUsername: review.reviewer.profile?.displayName || 'Anonymous',
+      buyerAvatar: review.reviewer.profile?.avatar || null,
       comment: review.comment,
       rating: review.rating,
-      game: (review.productId as { title?: string })?.title || 'Gaming',
+      game: review.purchase.listing.game.name,
       createdAt: review.createdAt,
       updatedAt: review.updatedAt
     }));
@@ -45,14 +73,14 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 // POST /api/reviews - Add a new review (requires authentication)
 router.post('/', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { productId, rating, comment } = req.body;
+    const { purchaseId, rating, comment } = req.body;
     const userId = req.user?.userId;
 
     // Validation
-    if (!productId || !rating || !comment) {
+    if (!purchaseId || !rating || !comment) {
       const response: ApiResponse = {
         success: false,
-        message: 'Product ID, rating, and comment are required'
+        message: 'Purchase ID, rating, and comment are required'
       };
       res.status(400).json(response);
       return;
@@ -76,34 +104,58 @@ router.post('/', authenticate, async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Check if user already reviewed this product
-    const existingReview = await Review.findOne({ userId, productId });
+    // Verify the purchase exists and belongs to the user
+    const purchase = await prisma.purchase.findFirst({
+      where: {
+        id: purchaseId,
+        buyerId: userId,
+        status: 'COMPLETED'
+      }
+    });
+
+    if (!purchase) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'Purchase not found or not completed'
+      };
+      res.status(404).json(response);
+      return;
+    }
+
+    // Check if user already reviewed this purchase
+    const existingReview = await prisma.review.findFirst({
+      where: {
+        reviewerId: userId,
+        purchaseId: purchaseId
+      }
+    });
+
     if (existingReview) {
       const response: ApiResponse = {
         success: false,
-        message: 'You have already reviewed this product'
+        message: 'You have already reviewed this purchase'
       };
       res.status(409).json(response);
       return;
     }
 
     // Create new review
-    const review = new Review({
-      userId,
-      productId,
-      rating,
-      comment: comment.trim()
+    const review = await prisma.review.create({
+      data: {
+        reviewerId: userId,
+        purchaseId: purchaseId,
+        rating: rating,
+        comment: comment.trim()
+      }
     });
-
-    await review.save();
 
     const response: ApiResponse = {
       success: true,
       message: 'Review added successfully',
       data: {
-        id: review._id,
-        userId: review.userId,
-        productId: review.productId,
+        id: review.id,
+        reviewerId: review.reviewerId,
+        purchaseId: review.purchaseId,
         rating: review.rating,
         comment: review.comment,
         createdAt: review.createdAt,
@@ -129,11 +181,11 @@ router.put('/:id', authenticate, async (req: Request, res: Response): Promise<vo
     const { rating, comment } = req.body;
     const userId = req.user?.userId;
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    // Basic ID validation (Prisma will handle the rest)
+    if (!id) {
       const response: ApiResponse = {
         success: false,
-        message: 'Invalid review ID'
+        message: 'Review ID is required'
       };
       res.status(400).json(response);
       return;
@@ -159,7 +211,10 @@ router.put('/:id', authenticate, async (req: Request, res: Response): Promise<vo
     }
 
     // Find review and verify ownership
-    const review = await Review.findById(id);
+    const review = await prisma.review.findUnique({
+      where: { id: id }
+    });
+
     if (!review) {
       const response: ApiResponse = {
         success: false,
@@ -169,7 +224,7 @@ router.put('/:id', authenticate, async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    if (review.userId.toString() !== userId) {
+    if (review.reviewerId !== userId) {
       const response: ApiResponse = {
         success: false,
         message: 'You can only edit your own reviews'
@@ -183,23 +238,22 @@ router.put('/:id', authenticate, async (req: Request, res: Response): Promise<vo
     if (rating !== undefined) updateData.rating = rating;
     if (comment !== undefined) updateData.comment = comment.trim();
 
-    const updatedReview = await Review.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const updatedReview = await prisma.review.update({
+      where: { id: id },
+      data: updateData
+    });
 
     const response: ApiResponse = {
       success: true,
       message: 'Review updated successfully',
       data: {
-        id: updatedReview!._id,
-        userId: updatedReview!.userId,
-        productId: updatedReview!.productId,
-        rating: updatedReview!.rating,
-        comment: updatedReview!.comment,
-        createdAt: updatedReview!.createdAt,
-        updatedAt: updatedReview!.updatedAt
+        id: updatedReview.id,
+        reviewerId: updatedReview.reviewerId,
+        purchaseId: updatedReview.purchaseId,
+        rating: updatedReview.rating,
+        comment: updatedReview.comment,
+        createdAt: updatedReview.createdAt,
+        updatedAt: updatedReview.updatedAt
       }
     };
 
@@ -220,18 +274,21 @@ router.delete('/:id', authenticate, async (req: Request, res: Response): Promise
     const { id } = req.params;
     const userId = req.user?.userId;
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    // Basic ID validation
+    if (!id) {
       const response: ApiResponse = {
         success: false,
-        message: 'Invalid review ID'
+        message: 'Review ID is required'
       };
       res.status(400).json(response);
       return;
     }
 
     // Find review and verify ownership
-    const review = await Review.findById(id);
+    const review = await prisma.review.findUnique({
+      where: { id: id }
+    });
+
     if (!review) {
       const response: ApiResponse = {
         success: false,
@@ -241,7 +298,7 @@ router.delete('/:id', authenticate, async (req: Request, res: Response): Promise
       return;
     }
 
-    if (review.userId.toString() !== userId) {
+    if (review.reviewerId !== userId) {
       const response: ApiResponse = {
         success: false,
         message: 'You can only delete your own reviews'
@@ -251,7 +308,9 @@ router.delete('/:id', authenticate, async (req: Request, res: Response): Promise
     }
 
     // Delete review
-    await Review.findByIdAndDelete(id);
+    await prisma.review.delete({
+      where: { id: id }
+    });
 
     const response: ApiResponse = {
       success: true,

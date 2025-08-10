@@ -1,8 +1,8 @@
 import express from 'express';
-import mongoose from 'mongoose';
-import Message from '../models/message.model';
-import Conversation from '../models/conversation.model';
+import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../modules/auth/auth.middleware';
+
+const prisma = new PrismaClient();
 
 const router = express.Router();
 
@@ -20,10 +20,11 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+    // Basic validation - Prisma will handle ID validation
+    if (!receiverId) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid receiver ID'
+        message: 'Receiver ID is required'
       });
     }
 
@@ -41,44 +42,73 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    // Create the message
-    const message = new Message({
-      senderId,
-      receiverId,
-      content: content.trim()
-    });
-
-    await message.save();
-
-    // Find or create conversation
-    const participants = [senderId, receiverId].sort();
-    let conversation = await Conversation.findOne({
-      participants: { $all: participants }
+    // Find or create conversation first
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        OR: [
+          { AND: [{ user1Id: senderId }, { user2Id: receiverId }] },
+          { AND: [{ user1Id: receiverId }, { user2Id: senderId }] }
+        ]
+      }
     });
 
     if (!conversation) {
-      conversation = new Conversation({
-        participants,
-        lastMessage: message._id,
-        lastMessageAt: message.createdAt
+      conversation = await prisma.conversation.create({
+        data: {
+          user1Id: senderId < receiverId ? senderId : receiverId,
+          user2Id: senderId < receiverId ? receiverId : senderId
+        }
       });
-    } else {
-      conversation.lastMessage = message._id as mongoose.Types.ObjectId;
-    conversation.lastMessageAt = message.createdAt;
     }
 
-    await conversation.save();
+    // Create the message
+    const message = await prisma.message.create({
+      data: {
+        senderId,
+        receiverId,
+        conversationId: conversation.id,
+        content: content.trim()
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true
+              }
+            }
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true
+              }
+            }
+          }
+        }
+      }
+    });
 
-    // Populate sender and receiver info
-    await message.populate('senderId', 'username email');
-    await message.populate('receiverId', 'username email');
+    // Update conversation with last message info
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: {
+        lastMessageAt: message.createdAt
+      }
+    });
 
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
       data: {
         message,
-        conversationId: conversation._id
+        conversationId: conversation.id
       }
     });
     return;
@@ -97,24 +127,66 @@ router.get('/conversations', authenticate, async (req, res) => {
   try {
     const userId = req.user?.userId;
 
-    const conversations = await Conversation.find({
-      participants: userId
-    })
-    .populate('participants', 'username email')
-    .populate('lastMessage')
-    .sort({ lastMessageAt: -1 })
-    .limit(50);
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        OR: [
+          { user1Id: userId },
+          { user2Id: userId }
+        ]
+      },
+      include: {
+        user1: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true
+              }
+            }
+          }
+        },
+        user2: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true
+              }
+            }
+          }
+        },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: {
+            sender: {
+              select: {
+                id: true,
+                profile: {
+                  select: {
+                    displayName: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: { lastMessageAt: 'desc' },
+      take: 50
+    });
 
     // Format conversations to include other participant info
     const formattedConversations = conversations.map(conv => {
-      const otherParticipant = conv.participants.find(
-        (p: { _id: mongoose.Types.ObjectId }) => p._id.toString() !== userId
-      );
+      const otherParticipant = conv.user1Id === userId ? conv.user2 : conv.user1;
+      const lastMessage = conv.messages[0] || null;
 
       return {
-        _id: conv._id,
+        id: conv.id,
         otherParticipant,
-        lastMessage: conv.lastMessage,
+        lastMessage,
         lastMessageAt: conv.lastMessageAt,
         createdAt: conv.createdAt,
         updatedAt: conv.updatedAt
@@ -148,16 +220,43 @@ router.get('/:conversationId', authenticate, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 50;
     const skip = (page - 1) * limit;
 
-    // Validate conversation ID
-    if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+    // Basic validation
+    if (!conversationId) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid conversation ID'
+        message: 'Conversation ID is required'
       });
     }
 
     // Check if user is participant in the conversation
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        user1: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true
+              }
+            }
+          }
+        },
+        user2: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true
+              }
+            }
+          }
+        }
+      }
+    });
+
     if (!conversation) {
       return res.status(404).json({
         success: false,
@@ -165,9 +264,7 @@ router.get('/:conversationId', authenticate, async (req, res) => {
       });
     }
 
-    const isParticipant = conversation.participants.some(
-      (p: mongoose.Types.ObjectId) => p.toString() === userId
-    );
+    const isParticipant = conversation.user1Id === userId || conversation.user2Id === userId;
 
     if (!isParticipant) {
       return res.status(403).json({
@@ -177,22 +274,44 @@ router.get('/:conversationId', authenticate, async (req, res) => {
     }
 
     // Get messages in the conversation
-    const messages = await Message.find({
-      $or: [
-        { senderId: { $in: conversation.participants }, receiverId: { $in: conversation.participants } }
-      ]
-    })
-    .populate('senderId', 'username email')
-    .populate('receiverId', 'username email')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+    const messages = await prisma.message.findMany({
+      where: {
+        conversationId: conversationId
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true
+              }
+            }
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: skip,
+      take: limit
+    });
 
     // Get total count for pagination
-    const totalMessages = await Message.countDocuments({
-      $or: [
-        { senderId: { $in: conversation.participants }, receiverId: { $in: conversation.participants } }
-      ]
+    const totalMessages = await prisma.message.count({
+      where: {
+        conversationId: conversationId
+      }
     });
 
     res.json({
@@ -207,8 +326,8 @@ router.get('/:conversationId', authenticate, async (req, res) => {
           hasPrevPage: page > 1
         },
         conversation: {
-          _id: conversation._id,
-          participants: conversation.participants,
+          id: conversation.id,
+          participants: [conversation.user1, conversation.user2],
           createdAt: conversation.createdAt
         }
       }

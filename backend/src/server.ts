@@ -68,13 +68,13 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/health', healthRoutes);
-app.use('/api/listing', listingRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/admin', adminRoutes);
+// app.use('/api/listing', listingRoutes);
+// app.use('/api/user', userRoutes);
+// app.use('/api/products', productRoutes);
+// app.use('/api/orders', orderRoutes);
+// app.use('/api/reviews', reviewRoutes);
+// app.use('/api/messages', messageRoutes);
+// app.use('/api/admin', adminRoutes);
 
 // Global error handler
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

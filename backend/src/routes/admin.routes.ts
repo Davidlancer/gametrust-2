@@ -1,8 +1,8 @@
 import express from 'express';
-import mongoose from 'mongoose';
-import { User } from '../models/User';
-import Message from '../models/message.model';
+import { PrismaClient } from '@prisma/client';
 import { authenticate, adminOnly } from '../modules/auth/auth.middleware';
+
+const prisma = new PrismaClient();
 
 const router = express.Router();
 
@@ -20,43 +20,51 @@ router.get('/users', async (req, res) => {
     const role = req.query.role as string;
     const status = req.query.status as string;
 
-    // Build query filters
-    const query: {
-      $or?: Array<{ username: { $regex: string; $options: string } } | { email: { $regex: string; $options: string } }>;
-      role?: string;
-      isActive?: boolean;
-      isBanned?: boolean;
-    } = {};
+    // Build Prisma where clause
+    const where: any = {};
     
     if (search) {
-      query.$or = [
-        { username: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } }
       ];
     }
     
-    if (role && ['buyer', 'seller', 'admin'].includes(role)) {
-      query.role = role;
-    }
-    
     if (status === 'active') {
-      query.isActive = true;
-      query.isBanned = false;
-    } else if (status === 'banned') {
-      query.isBanned = true;
+      where.isActive = true;
     } else if (status === 'inactive') {
-      query.isActive = false;
+      where.isActive = false;
     }
 
     // Get users with pagination
-    const users = await User.find(query)
-      .select('-password -refreshToken -resetPasswordToken -emailVerificationToken')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        email: true,
+        isEmailVerified: true,
+        isActive: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
+        profile: {
+          select: {
+            firstName: true,
+            lastName: true,
+            displayName: true,
+            avatar: true,
+            totalSales: true,
+            rating: true,
+            isVerified: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit
+    });
 
     // Get total count for pagination
-    const totalUsers = await User.countDocuments(query);
+    const totalUsers = await prisma.user.count({ where });
 
     res.json({
       success: true,
@@ -89,13 +97,7 @@ router.put('/users/:id/ban', async (req, res) => {
     const { id } = req.params;
     const { isBanned } = req.body;
 
-    // Validate user ID
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid user ID'
-      });
-    }
+    // Prisma will handle invalid ID validation automatically
 
     // Validate isBanned field
     if (typeof isBanned !== 'boolean') {
@@ -106,7 +108,11 @@ router.put('/users/:id/ban', async (req, res) => {
     }
 
     // Find the user
-    const user = await User.findById(id);
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, isActive: true }
+    });
+    
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -115,39 +121,33 @@ router.put('/users/:id/ban', async (req, res) => {
     }
 
     // Prevent admin from banning themselves
-    if (user._id.toString() === req.user?.userId) {
+    if (user.id === req.user?.userId) {
       return res.status(400).json({
         success: false,
         message: 'Cannot ban yourself'
       });
     }
 
-    // Prevent banning other admins
-    if (user.role === 'admin') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot ban other administrators'
-      });
-    }
-
-    // Update user ban status
-    user.isBanned = isBanned;
-    
-    // Note: Ban reason, bannedAt, and bannedBy fields would need to be added to User model
-    // For now, we'll just update the isBanned status
-
-    await user.save();
-
-    // Return updated user (without sensitive fields)
-    const updatedUser = await User.findById(id)
-      .select('-password -refreshToken -resetPasswordToken -emailVerificationToken');
+    // Update user status
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { isActive: !isBanned },
+      select: {
+        id: true,
+        email: true,
+        isActive: true,
+        profile: {
+          select: {
+            displayName: true
+          }
+        }
+      }
+    });
 
     res.json({
       success: true,
-      message: isBanned ? 'User banned successfully' : 'User unbanned successfully',
-      data: {
-        user: updatedUser
-      }
+      message: `User ${isBanned ? 'banned' : 'unbanned'} successfully`,
+      data: { user: updatedUser }
     });
     return;
   } catch (error) {
@@ -164,44 +164,30 @@ router.put('/users/:id/ban', async (req, res) => {
 router.get('/stats', async (req, res) => {
   try {
     // Get total counts
-    const totalUsers = await User.countDocuments();
-    const totalActiveUsers = await User.countDocuments({ isActive: true, isBanned: false });
-    const totalBannedUsers = await User.countDocuments({ isBanned: true });
-    
-    // Get user counts by role
-    const usersByRole = await User.aggregate([
-      {
-        $group: {
-          _id: '$role',
-          count: { $sum: 1 }
-        }
-      }
-    ]);
+    const totalUsers = await prisma.user.count();
+    const totalActiveUsers = await prisma.user.count({ 
+      where: { isActive: true } 
+    });
+    const totalInactiveUsers = await prisma.user.count({ 
+      where: { isActive: false } 
+    });
 
     // Get recent user registrations (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentRegistrations = await User.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo }
+    const recentRegistrations = await prisma.user.count({
+      where: {
+        createdAt: { gte: thirtyDaysAgo }
+      }
     });
 
-    // Get message statistics
-    const totalMessages = await Message.countDocuments();
-    const recentMessages = await Message.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo }
+    // Get listing statistics
+    const totalListings = await prisma.listing.count();
+    const activeListings = await prisma.listing.count({
+      where: { status: 'ACTIVE' }
     });
-
-    // Format user role statistics
-    const roleStats = {
-      buyers: 0,
-      sellers: 0,
-      admins: 0
-    };
-    
-    usersByRole.forEach(role => {
-      if (role._id === 'buyer') roleStats.buyers = role.count;
-      if (role._id === 'seller') roleStats.sellers = role.count;
-      if (role._id === 'admin') roleStats.admins = role.count;
+    const soldListings = await prisma.listing.count({
+      where: { status: 'SOLD' }
     });
 
     res.json({
@@ -210,25 +196,19 @@ router.get('/stats', async (req, res) => {
         users: {
           total: totalUsers,
           active: totalActiveUsers,
-          banned: totalBannedUsers,
-          recentRegistrations,
-          byRole: roleStats
+          inactive: totalInactiveUsers,
+          recentRegistrations
         },
-        messages: {
-          total: totalMessages,
-          recent: recentMessages
+        listings: {
+          total: totalListings,
+          active: activeListings,
+          sold: soldListings
         },
-        // Mock data for products and orders (since models don't exist yet)
-        products: {
-          total: 0,
-          active: 0,
-          recent: 0
-        },
-        orders: {
-          total: 0,
-          completed: 0,
-          pending: 0,
-          recent: 0
+        marketplace: {
+          totalPurchases: await prisma.purchase.count(),
+          completedPurchases: await prisma.purchase.count({ where: { status: 'COMPLETED' } }),
+          totalSales: await prisma.sale.count(),
+          totalEscrows: await prisma.escrow.count()
         },
         systemInfo: {
           serverUptime: process.uptime(),

@@ -1,11 +1,14 @@
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
 
 class Database {
   private static instance: Database;
+  public prisma: PrismaClient;
   private isConnected: boolean = false;
 
-  private constructor() {}
+  private constructor() {
+    this.prisma = new PrismaClient();
+  }
 
   public static getInstance(): Database {
     if (!Database.instance) {
@@ -21,38 +24,19 @@ class Database {
     }
 
     try {
-      const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/gametrust';
+      // Test the connection
+      await this.prisma.$connect();
       
-      await mongoose.connect(mongoUri, {
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
-        bufferCommands: false,
-      });
-
+      // Verify connection with a simple query
+      await this.prisma.$queryRaw`SELECT 1`;
+      
       this.isConnected = true;
-      logger.info('✅ Connected to MongoDB successfully');
-
-      // Handle connection events
-      mongoose.connection.on('error', (error) => {
-        logger.error('MongoDB connection error:', error);
-        this.isConnected = false;
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        logger.warn('MongoDB disconnected');
-        this.isConnected = false;
-      });
-
-      mongoose.connection.on('reconnected', () => {
-        logger.info('MongoDB reconnected');
-        this.isConnected = true;
-      });
-
+      logger.info('✅ Connected to PostgreSQL via Prisma successfully');
     } catch (error) {
-      logger.error('❌ MongoDB connection failed:', error);
+      logger.error('❌ Database connection failed:', error);
       this.isConnected = false;
-      throw error;
+      process.exit(1)
+      // throw error;
     }
   }
 
@@ -62,11 +46,11 @@ class Database {
     }
 
     try {
-      await mongoose.disconnect();
+      await this.prisma.$disconnect();
       this.isConnected = false;
-      logger.info('MongoDB disconnected successfully');
+      logger.info('Database disconnected successfully');
     } catch (error) {
-      logger.error('Error disconnecting from MongoDB:', error);
+      logger.error('Error disconnecting from database:', error);
       throw error;
     }
   }
@@ -74,6 +58,23 @@ class Database {
   public getConnectionStatus(): boolean {
     return this.isConnected;
   }
+
+  public getPrismaClient(): PrismaClient {
+    return this.prisma;
+  }
+
+  // Health check method
+  public async healthCheck(): Promise<boolean> {
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      return true;
+    } catch (error) {
+      logger.error('Database health check failed:', error);
+      return false;
+    }
+  }
 }
 
 export default Database.getInstance();
+const prisma = Database.getInstance().prisma
+export { PrismaClient, prisma  };

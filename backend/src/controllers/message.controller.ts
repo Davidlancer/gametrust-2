@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import mongoose from 'mongoose';
-import { Message, Conversation } from '../models/Message';
-import { User } from '../models/User';
+import { PrismaClient } from '@prisma/client';
 import { logger } from '../utils/logger';
-import { ApiResponse, MongoFilter } from '../types';
+import { ApiResponse } from '../types';
+
+const prisma = new PrismaClient();
 
 // Send a message
 export const sendMessage = async (req: Request, res: Response): Promise<void> => {
@@ -29,7 +29,9 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
     }
 
     // Check if recipient exists
-    const recipient = await User.findById(recipientId);
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId }
+    });
     if (!recipient) {
       res.status(404).json({
         success: false,
@@ -41,7 +43,9 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
     // Find or create conversation
     let conversation;
     if (conversationId) {
-      conversation = await Conversation.findById(conversationId);
+      conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId }
+      });
       if (!conversation) {
         res.status(404).json({
           success: false,
@@ -51,7 +55,7 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       }
 
       // Check if user is part of the conversation
-      if (!conversation.participants.includes(new mongoose.Types.ObjectId(userId))) {
+      if (conversation.user1Id !== userId && conversation.user2Id !== userId) {
         res.status(403).json({
           success: false,
           message: 'Not authorized to send message in this conversation'
@@ -60,49 +64,78 @@ export const sendMessage = async (req: Request, res: Response): Promise<void> =>
       }
     } else {
       // Create new conversation or find existing one
-      conversation = await Conversation.findOne({
-        participants: { $all: [userId, recipientId] },
-        ...(productId && { product: productId })
+      conversation = await prisma.conversation.findFirst({
+        where: {
+          OR: [
+            { AND: [{ user1Id: userId }, { user2Id: recipientId }] },
+            { AND: [{ user1Id: recipientId }, { user2Id: userId }] }
+          ]
+        }
       });
 
       if (!conversation) {
-        conversation = new Conversation({
-          participants: [userId, recipientId],
-          product: productId,
-          order: orderId
+        conversation = await prisma.conversation.create({
+          data: {
+            user1Id: userId < recipientId ? userId : recipientId,
+            user2Id: userId < recipientId ? recipientId : userId
+          }
         });
-        await conversation.save();
       }
     }
 
     // Create message
-    const message = new Message({
-      conversation: conversation._id,
-      sender: userId,
-      recipient: recipientId,
-      content,
-      attachments: attachments || [],
-      messageType: attachments && attachments.length > 0 ? 'media' : 'text'
+    const message = await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: userId,
+        receiverId: recipientId,
+        content,
+        attachments: attachments || []
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true,
+                avatar: true
+              }
+            }
+          }
+        },
+        receiver: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                displayName: true,
+                avatar: true
+              }
+            }
+          }
+        }
+      }
     });
 
-    await message.save();
-
-    // Populate message for response
-    const populatedMessage = await Message.findById(message._id)
-      .populate('sender', 'firstName lastName username avatar')
-      .populate('recipient', 'firstName lastName username avatar')
-      .lean();
+    // Update conversation last message time
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { lastMessageAt: message.createdAt }
+    });
 
     res.status(201).json({
       success: true,
       message: 'Message sent successfully',
       data: { 
-        message: populatedMessage,
-        conversationId: conversation._id
+        message,
+        conversationId: conversation.id
       }
     } as ApiResponse);
 
-    logger.info(`Message sent: ${message._id} from ${userId} to ${recipientId}`);
+    logger.info(`Message sent: ${message.id} from ${userId} to ${recipientId}`);
   } catch (error) {
     logger.error('Send message error:', error);
     res.status(500).json({
@@ -134,15 +167,69 @@ export const getConversations = async (req: Request, res: Response): Promise<voi
     const skip = (pageNum - 1) * limitNum;
 
     const [conversations, totalCount] = await Promise.all([
-      Conversation.find({ participants: userId })
-        .populate('participants', 'firstName lastName username avatar')
-        .populate('product', 'title images price')
-        .populate('lastMessage')
-        .sort({ updatedAt: -1 })
-        .skip(skip)
-        .limit(limitNum)
-        .lean(),
-      Conversation.countDocuments({ participants: userId })
+      prisma.conversation.findMany({
+        where: {
+          OR: [
+            { user1Id: userId },
+            { user2Id: userId }
+          ]
+        },
+        include: {
+          user1: {
+            select: {
+              id: true,
+              email: true,
+              profile: {
+                select: {
+                  displayName: true,
+                  avatar: true
+                }
+              }
+            }
+          },
+          user2: {
+            select: {
+              id: true,
+              email: true,
+              profile: {
+                select: {
+                  displayName: true,
+                  avatar: true
+                }
+              }
+            }
+          },
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: {
+              sender: {
+                select: {
+                  id: true,
+                  email: true,
+                  profile: {
+                    select: {
+                      displayName: true,
+                      avatar: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        orderBy: { lastMessageAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.conversation.count({
+        where: {
+          OR: [
+            { user1Id: userId },
+            { user2Id: userId }
+          ]
+        }
+      })
     ]);
 
     const totalPages = Math.ceil(totalCount / limitNum);
@@ -193,7 +280,9 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
     const skip = (pageNum - 1) * limitNum;
 
     // Check if user is part of the conversation
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId }
+    });
     if (!conversation) {
       res.status(404).json({
         success: false,
@@ -202,7 +291,7 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    if (!conversation.participants.includes(new mongoose.Types.ObjectId(userId))) {
+    if (conversation.user1Id !== userId && conversation.user2Id !== userId) {
       res.status(403).json({
         success: false,
         message: 'Not authorized to view this conversation'
@@ -211,25 +300,50 @@ export const getMessages = async (req: Request, res: Response): Promise<void> =>
     }
 
     const [messages, totalCount] = await Promise.all([
-      Message.find({ conversation: conversationId })
-        .populate('sender', 'firstName lastName username avatar')
-        .populate('recipient', 'firstName lastName username avatar')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limitNum)
-        .lean(),
-      Message.countDocuments({ conversation: conversationId })
+      prisma.message.findMany({
+        where: { conversationId },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              email: true,
+              profile: {
+                select: {
+                  displayName: true,
+                  avatar: true
+                }
+              }
+            }
+          },
+          receiver: {
+            select: {
+              id: true,
+              email: true,
+              profile: {
+                select: {
+                  displayName: true,
+                  avatar: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.message.count({ where: { conversationId } })
     ]);
 
     // Mark messages as read
-    await Message.updateMany(
-      {
-        conversation: conversationId,
-        recipient: userId,
+    await prisma.message.updateMany({
+      where: {
+        conversationId,
+        receiverId: userId,
         isRead: false
       },
-      { isRead: true, readAt: new Date() }
-    );
+      data: { isRead: true, readAt: new Date() }
+    });
 
     const totalPages = Math.ceil(totalCount / limitNum);
 
@@ -269,7 +383,9 @@ export const markMessageAsRead = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const message = await Message.findById(messageId);
+    const message = await prisma.message.findUnique({
+      where: { id: messageId }
+    });
     if (!message) {
       res.status(404).json({
         success: false,
@@ -279,7 +395,7 @@ export const markMessageAsRead = async (req: Request, res: Response): Promise<vo
     }
 
     // Check if user is the recipient
-    if (message.recipient.toString() !== userId) {
+    if (message.receiverId !== userId) {
       res.status(403).json({
         success: false,
         message: 'Not authorized to mark this message as read'
@@ -288,9 +404,13 @@ export const markMessageAsRead = async (req: Request, res: Response): Promise<vo
     }
 
     // Mark as read
-    message.isRead = true;
-    message.readAt = new Date();
-    await message.save();
+    await prisma.message.update({
+      where: { id: messageId },
+      data: {
+        isRead: true,
+        readAt: new Date()
+      }
+    });
 
     res.json({
       success: true,
@@ -319,7 +439,9 @@ export const deleteMessage = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const message = await Message.findById(messageId);
+    const message = await prisma.message.findUnique({
+      where: { id: messageId }
+    });
     if (!message) {
       res.status(404).json({
         success: false,
@@ -329,7 +451,7 @@ export const deleteMessage = async (req: Request, res: Response): Promise<void> 
     }
 
     // Check if user is the sender
-    if (message.sender.toString() !== userId) {
+    if (message.senderId !== userId) {
       res.status(403).json({
         success: false,
         message: 'Not authorized to delete this message'
@@ -338,9 +460,13 @@ export const deleteMessage = async (req: Request, res: Response): Promise<void> 
     }
 
     // Soft delete - mark as deleted
-    message.isDeleted = true;
-    message.deletedAt = new Date();
-    await message.save();
+    await prisma.message.update({
+      where: { id: messageId },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date()
+      }
+    });
 
     res.json({
       success: true,
@@ -369,10 +495,12 @@ export const getUnreadCount = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const unreadCount = await Message.countDocuments({
-      recipient: userId,
-      isRead: false,
-      isDeleted: false
+    const unreadCount = await prisma.message.count({
+      where: {
+        receiverId: userId,
+        isRead: false,
+        isDeleted: false
+      }
     });
 
     res.json({
@@ -420,29 +548,63 @@ export const searchMessages = async (req: Request, res: Response): Promise<void>
     const skip = (pageNum - 1) * limitNum;
 
     // Build search filter
-    const filter: MongoFilter = {
-      $or: [
-        { sender: userId },
-        { recipient: userId }
+    const whereClause: any = {
+      OR: [
+        { senderId: userId },
+        { receiverId: userId }
       ],
-      content: { $regex: query, $options: 'i' },
+      content: {
+        contains: query as string,
+        mode: 'insensitive'
+      },
       isDeleted: false
     };
 
     if (conversationId) {
-      filter.conversation = conversationId;
+      whereClause.conversationId = conversationId as string;
     }
 
     const [messages, totalCount] = await Promise.all([
-      Message.find(filter)
-        .populate('sender', 'firstName lastName username avatar')
-        .populate('recipient', 'firstName lastName username avatar')
-        .populate('conversation', 'participants product')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limitNum)
-        .lean(),
-      Message.countDocuments(filter)
+      prisma.message.findMany({
+        where: whereClause,
+        include: {
+          sender: {
+            select: {
+              id: true,
+              email: true,
+              profile: {
+                select: {
+                  displayName: true,
+                  avatar: true
+                }
+              }
+            }
+          },
+          receiver: {
+            select: {
+              id: true,
+              email: true,
+              profile: {
+                select: {
+                  displayName: true,
+                  avatar: true
+                }
+              }
+            }
+          },
+          conversation: {
+            select: {
+              id: true,
+              user1Id: true,
+              user2Id: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum
+      }),
+      prisma.message.count({ where: whereClause })
     ]);
 
     const totalPages = Math.ceil(totalCount / limitNum);

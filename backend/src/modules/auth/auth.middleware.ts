@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User } from '../../models/User';
+import { prisma } from '../../config/database';
 import { logger } from '../../utils/logger';
 import { ApiResponse } from '../../types';
 
@@ -37,7 +37,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     };
 
     // Find user
-    const user = await User.findById(decoded.userId);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        isActive: true
+      }
+    });
+    
     if (!user) {
       res.status(401).json({
         success: false,
@@ -46,19 +54,19 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    // Check if user is active and not banned
-    if (!user.isActive || user.isBanned) {
+    // Check if user is active
+    if (!user.isActive) {
       res.status(401).json({
         success: false,
-        message: user.isBanned ? 'Account has been banned' : 'Account is inactive'
+        message: 'Account is inactive'
       } as ApiResponse);
       return;
     }
 
     // Attach user to request
     req.user = {
-      userId: user._id.toString(),
-      role: user.role,
+      userId: user.id,
+      role: decoded.role,
       email: user.email
     };
 
@@ -102,11 +110,19 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     };
 
     // Find user
-    const user = await User.findById(decoded.userId);
-    if (user && user.isActive && !user.isBanned) {
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        isActive: true
+      }
+    });
+    
+    if (user && user.isActive) {
       req.user = {
-        userId: user._id.toString(),
-        role: user.role,
+        userId: user.id,
+        role: decoded.role,
         email: user.email
       };
     }
@@ -208,7 +224,14 @@ export const requireEmailVerification = async (req: Request, res: Response, next
       return;
     }
 
-    const user = await User.findById(req.user.userId);
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: {
+        id: true,
+        isEmailVerified: true
+      }
+    });
+    
     if (!user || !user.isEmailVerified) {
       res.status(403).json({
         success: false,

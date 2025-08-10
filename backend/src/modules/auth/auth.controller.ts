@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import crypto from 'crypto';
-import { User } from '../../models/User';
 import { logger } from '../../utils/logger';
 import { sendEmail } from '../../utils/email';
 import { ApiResponse } from '../../types';
+import { AuthService } from './auth.service';
 
 // Generate JWT token
 const generateToken = (userId: string, role: string): string => {
@@ -56,70 +55,39 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     // 3. Email uniqueness check
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
-    });
+    const existingUser = await AuthService.userExistsByEmail(email);
 
     if (existingUser) {
-      if (existingUser.email === email) {
-        res.status(400).json({
-          success: false,
-          message: 'Email is already registered'
-        } as ApiResponse);
-        return;
-      } else {
-        res.status(400).json({
-          success: false,
-          message: 'Username is already taken'
-        } as ApiResponse);
-        return;
-      }
+      res.status(400).json({
+        success: false,
+        message: 'Email is already registered'
+      } as ApiResponse);
+      return;
     }
 
-    // 4. Create new user (password will be hashed by pre-save middleware)
-    const user = new User({
+    // 4. Create new user
+    const user = await AuthService.createUser({
       email,
       password,
       firstName,
       lastName,
       username,
-      role,
-      isActive: true // Mark account active by default
+      role
     });
 
-    // Generate email verification token
-    const verificationToken = user.generateEmailVerificationToken();
-    await user.save();
-
-    // Send verification email
-    try {
-      await sendEmail({
-        to: email,
-        subject: 'Verify your GameTrust account',
-        template: 'email-verification',
-        data: {
-          firstName,
-          verificationToken,
-          verificationUrl: `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`
-        }
-      });
-    } catch (emailError) {
-      logger.error('Failed to send verification email:', emailError);
-    }
-
     // Generate tokens
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user.id, role);
 
     // 5. Success response (201)
     res.status(201).json({
       success: true,
       message: 'User registered',
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        username: user.username
+        firstName: user.profile?.firstName,
+        lastName: user.profile?.lastName,
+        username: user.profile?.displayName
       },
       token
     } as ApiResponse);
@@ -207,13 +175,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       passwordLength: password?.length
     });
 
-    // Find user and include password for comparison
-    const user = await User.findOne({ email }).select('+password');
+    // Authenticate user
+    const user = await AuthService.authenticateUser(email, password);
 
-    if (!user || !user.password) {
-      // Log failed login attempt without password
-      console.log('Failed login attempt:', { email, reason: 'User not found or no password' });
-      logger.warn(`Failed login attempt for email: ${email} - User not found or no password`);
+    if (!user) {
+      // Log failed login attempt
+      console.log('Failed login attempt:', { email, reason: 'Invalid credentials' });
+      logger.warn(`Failed login attempt for email: ${email} - Invalid credentials`);
       
       res.status(401).json({
         success: false,
@@ -222,50 +190,32 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check if user is active and not banned
-    if (!user.isActive || user.isBanned) {
+    // Check if user is active
+    if (!user.isActive) {
       res.status(401).json({
         success: false,
-        message: user.isBanned ? 'Account has been banned' : 'Account is inactive'
+        message: 'Account is inactive'
       } as ApiResponse);
       return;
     }
-
-    // Compare password
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      // Log failed login attempt without password
-      console.log('Failed login attempt:', { email, reason: 'Invalid password' });
-      logger.warn(`Failed login attempt for email: ${email} - Invalid password`);
-      
-      res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      } as ApiResponse);
-      return;
-    }
-
-    // Update last login
-    user.lastLoginAt = new Date();
-    await user.save();
 
     // Generate tokens
-    const token = generateToken(user._id, user.role);
-    const refreshToken = generateRefreshToken(user._id);
+    const token = generateToken(user.id, 'buyer'); // Default role for now
+    const refreshToken = generateRefreshToken(user.id);
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
         user: {
-          id: user._id,
+          id: user.id,
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          role: user.role,
+          firstName: user.profile?.firstName,
+          lastName: user.profile?.lastName,
+          username: user.profile?.displayName,
+          role: 'buyer', // Default role for now
           isEmailVerified: user.isEmailVerified,
-          avatar: user.avatar
+          avatar: user.profile?.avatar
         },
         token,
         refreshToken
@@ -299,8 +249,8 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'your-refresh-secret') as { userId: string };
     
     // Find user
-    const user = await User.findById(decoded.userId);
-    if (!user || !user.isActive || user.isBanned) {
+    const user = await AuthService.findUserById(decoded.userId);
+    if (!user || !user.isActive) {
       res.status(401).json({
         success: false,
         message: 'Invalid refresh token'
@@ -309,8 +259,8 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
 
     // Generate new tokens
-    const newToken = generateToken(user._id, user.role);
-    const newRefreshToken = generateRefreshToken(user._id);
+    const newToken = generateToken(user.id, 'buyer'); // Default role for now
+    const newRefreshToken = generateRefreshToken(user.id);
 
     res.json({
       success: true,
@@ -334,8 +284,8 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) {
+    const result = await AuthService.generatePasswordResetTokenForUser(email);
+    if (!result) {
       res.status(404).json({
         success: false,
         message: 'User not found'
@@ -343,9 +293,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Generate reset token
-    const resetToken = user.generatePasswordResetToken();
-    await user.save();
+    const { user, token: resetToken } = result;
 
     // Send reset email
     try {
@@ -354,7 +302,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
         subject: 'Reset your GameTrust password',
         template: 'password-reset',
         data: {
-          firstName: user.firstName,
+          firstName: user.profile?.firstName,
           resetToken,
           resetUrl: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
         }
@@ -385,14 +333,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
   try {
     const { token, password } = req.body;
 
-    // Hash the token to compare with stored hash
-     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    // Find user with valid reset token
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: new Date() }
-    }).select('+passwordResetToken +passwordResetExpires');
+    const user = await AuthService.resetUserPassword(token, password);
 
     if (!user) {
       res.status(400).json({
@@ -401,12 +342,6 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       } as ApiResponse);
       return;
     }
-
-    // Update password and clear reset token
-    user.password = password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save();
 
     res.json({
       success: true,
@@ -428,13 +363,7 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
   try {
     const { token } = req.body;
 
-    // Hash the token to compare with stored hash
-     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    // Find user with verification token
-    const user = await User.findOne({
-      emailVerificationToken: hashedToken
-    }).select('+emailVerificationToken');
+    const user = await AuthService.verifyUserEmail(token);
 
     if (!user) {
       res.status(400).json({
@@ -443,11 +372,6 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
       } as ApiResponse);
       return;
     }
-
-    // Update user verification status
-    user.isEmailVerified = true;
-    user.emailVerificationToken = undefined;
-    await user.save();
 
     res.json({
       success: true,
@@ -469,7 +393,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
   try {
     const userId = (req as { user: { userId: string } }).user.userId;
     
-    const user = await User.findById(userId);
+    const user = await AuthService.findUserById(userId);
     if (!user) {
       res.status(404).json({
         success: false,
@@ -482,18 +406,21 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
       success: true,
       data: {
         user: {
-          id: user._id,
+          id: user.id,
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          role: user.role,
+          firstName: user.profile?.firstName,
+          lastName: user.profile?.lastName,
+          username: user.profile?.displayName,
+          role: 'buyer', // Default role for now
           isEmailVerified: user.isEmailVerified,
-          avatar: user.avatar,
-          phone: user.phone,
-          address: user.address,
-          preferences: user.preferences,
-          stats: user.stats,
+          avatar: user.profile?.avatar,
+          phone: user.profile?.phone,
+          bio: user.profile?.bio,
+          country: user.profile?.country,
+          timezone: user.profile?.timezone,
+          language: user.profile?.language,
+          favoriteGames: user.profile?.favoriteGames,
+          gamingPlatforms: user.profile?.gamingPlatforms,
           createdAt: user.createdAt
         }
       }
@@ -519,13 +446,10 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     delete updates.role;
     delete updates.isEmailVerified;
     delete updates.isActive;
-    delete updates.isBanned;
+    delete updates.id;
+    delete updates.userId;
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: updates },
-      { new: true, runValidators: true }
-    );
+    const user = await AuthService.updateUserProfile(userId, updates);
 
     if (!user) {
       res.status(404).json({
@@ -557,36 +481,23 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
     const userId = (req as { user: { userId: string } }).user.userId;
     const { currentPassword, newPassword } = req.body;
 
-    // Find user with password
-    const user = await User.findById(userId).select('+password');
-    if (!user || !user.password) {
-      res.status(404).json({
+    const result = await AuthService.changeUserPassword(userId, currentPassword, newPassword);
+
+    if (!result.success) {
+      const statusCode = result.message === 'User not found' ? 404 : 400;
+      res.status(statusCode).json({
         success: false,
-        message: 'User not found'
+        message: result.message
       } as ApiResponse);
       return;
     }
-
-    // Verify current password
-    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
-    if (!isCurrentPasswordValid) {
-      res.status(400).json({
-        success: false,
-        message: 'Current password is incorrect'
-      } as ApiResponse);
-      return;
-    }
-
-    // Update password
-    user.password = newPassword;
-    await user.save();
 
     res.json({
       success: true,
-      message: 'Password changed successfully'
+      message: result.message
     } as ApiResponse);
 
-    logger.info(`Password changed for user: ${user.email}`);
+    logger.info(`Password changed for user: ${result?.user?.email}`);
   } catch (error) {
     logger.error('Change password error:', error);
     res.status(500).json({
