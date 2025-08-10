@@ -174,17 +174,50 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 // Login user
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Log the full request body for debugging
+    console.log('Login request received:', {
+      body: req.body,
+      bodyKeys: Object.keys(req.body || {}),
+      contentType: req.headers['content-type'],
+      method: req.method,
+      url: req.url
+    });
+    
     const { email, password } = req.body;
     
-    console.log('Login attempt:', { email });
+    // Validate required fields
+    if (!email || !password) {
+      console.log('Login validation failed:', {
+        email: email ? 'provided' : 'missing',
+        password: password ? 'provided' : 'missing',
+        emailType: typeof email,
+        passwordType: typeof password
+      });
+      
+      res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      } as ApiResponse);
+      return;
+    }
+    
+    console.log('Login attempt:', { 
+      email,
+      emailLength: email?.length,
+      passwordLength: password?.length
+    });
 
     // Find user and include password for comparison
     const user = await User.findOne({ email }).select('+password');
 
     if (!user || !user.password) {
+      // Log failed login attempt without password
+      console.log('Failed login attempt:', { email, reason: 'User not found or no password' });
+      logger.warn(`Failed login attempt for email: ${email} - User not found or no password`);
+      
       res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid credentials'
       } as ApiResponse);
       return;
     }
@@ -201,9 +234,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Compare password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
+      // Log failed login attempt without password
+      console.log('Failed login attempt:', { email, reason: 'Invalid password' });
+      logger.warn(`Failed login attempt for email: ${email} - Invalid password`);
+      
       res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid credentials'
       } as ApiResponse);
       return;
     }

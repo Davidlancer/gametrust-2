@@ -6,6 +6,7 @@ import { apiService } from '../services/api';
 
 interface AuthProps {
   onNavigate: (page: string) => void;
+  onAuthSuccess?: () => void;
 }
 
 interface UserData {
@@ -17,13 +18,18 @@ interface UserData {
 }
 
 interface AuthResponse {
-  token?: string;
-  user?: UserData;
+  success: boolean;
+  message: string;
+  data?: {
+    token: string;
+    user: UserData;
+    refreshToken: string;
+  };
 }
 
 // const DEV_MODE = true; // Toggle for testing mode - currently unused
 
-const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
+const Auth: React.FC<AuthProps> = ({ onNavigate, onAuthSuccess }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -136,32 +142,116 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
           password: formData.password
         });
         
-        // Store authentication token and user data
+        // Log the full response object for debugging
+        console.log('Full registration response:', response);
+        console.log('Registration response status:', response.status);
+        console.log('Registration response data:', response.data);
+        
         const responseData = response.data as AuthResponse;
-        if (responseData.token) {
-          localStorage.setItem('auth_token', responseData.token);
-          localStorage.setItem('current_user', JSON.stringify(responseData.user));
-          console.log('Registration successful:', { email: formData.email, username: formData.username });
+        
+        // Check for successful response
+        if (response.status === 200 && responseData.success === true && responseData.data) {
+          const { token, user, refreshToken } = responseData.data;
+          
+          // Store authentication token and user data
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('current_user', JSON.stringify(user));
+          localStorage.setItem('refresh_token', refreshToken);
+          
+          console.log('Registration successful:', { 
+            email: formData.email, 
+            username: formData.username,
+            hasToken: !!token,
+            userRole: user.role,
+            message: responseData.message
+          });
+          
+          // Update parent authentication state
+          if (onAuthSuccess) {
+            onAuthSuccess();
+          }
+          
           onNavigate('onboarding');
         } else {
-          throw new Error('Registration failed');
+          // Handle unsuccessful response
+          const errorMessage = responseData.message || 'Registration failed';
+          console.error('Registration failed - Backend returned unsuccessful response:', {
+            status: response.status,
+            success: responseData.success,
+            message: responseData.message,
+            hasData: !!responseData.data
+          });
+          throw new Error(errorMessage);
         }
       } else {
-        const response = await apiService.auth.login({
+        // Validate form data before sending
+        console.log('Form data validation:', {
           email: formData.email,
-          password: formData.password
+          emailType: typeof formData.email,
+          emailLength: formData.email?.length,
+          emailEmpty: !formData.email || formData.email.trim() === '',
+          password: formData.password ? '***' : 'UNDEFINED/EMPTY',
+          passwordType: typeof formData.password,
+          passwordLength: formData.password?.length,
+          passwordEmpty: !formData.password || formData.password.trim() === ''
         });
         
-        // Store authentication token and user data
+        // Check for empty or undefined values
+        if (!formData.email || formData.email.trim() === '') {
+          throw new Error('Email is required');
+        }
+        if (!formData.password || formData.password.trim() === '') {
+          throw new Error('Password is required');
+        }
+        
+        // Log the exact payload being sent
+        const loginPayload = {
+          email: formData.email.trim(),
+          password: formData.password
+        };
+        console.log('Login payload being sent:', {
+          email: loginPayload.email,
+          password: '***',
+          payloadKeys: Object.keys(loginPayload)
+        });
+        
+        const response = await apiService.auth.login(loginPayload);
+        
+        // Log the full response object for debugging
+        console.log('=== LOGIN RESPONSE DEBUG ===');
+        console.log('Full login response:', response);
+        console.log('Response status:', response.status);
+        console.log('Response data:', response.data);
+        console.log('Response data type:', typeof response.data);
+        
         const responseData = response.data as AuthResponse;
-        if (responseData.token) {
-          localStorage.setItem('auth_token', responseData.token);
-          localStorage.setItem('current_user', JSON.stringify(responseData.user));
+        console.log('Response data success:', responseData?.success);
+        console.log('Response data success type:', typeof responseData?.success);
+        console.log('Response data has data:', !!responseData?.data);
+        console.log('=== END LOGIN RESPONSE DEBUG ===');
+        
+        // Check for successful response
+        if (response.status === 200 && responseData.success === true && responseData.data) {
+          const { token, user, refreshToken } = responseData.data;
           
-          console.log('Login successful:', { email: formData.email });
+          // Store authentication token and user data
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('current_user', JSON.stringify(user));
+          localStorage.setItem('refresh_token', refreshToken);
+          
+          console.log('Login successful:', { 
+            email: formData.email, 
+            hasToken: !!token, 
+            userRole: user.role,
+            message: responseData.message 
+          });
+          
+          // Update parent authentication state
+          if (onAuthSuccess) {
+            onAuthSuccess();
+          }
           
           // Route based on user role
-          const user = responseData.user;
           if (user && user.role === 'admin') {
             onNavigate('admin-dashboard');
           } else if (user) {
@@ -178,24 +268,57 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
             }
           }
         } else {
-          throw new Error('Invalid credentials');
+          // Handle unsuccessful response
+          const errorMessage = responseData.message || 'Login failed';
+          console.error('Login failed - Backend returned unsuccessful response:', {
+            status: response.status,
+            success: responseData.success,
+            message: responseData.message,
+            hasData: !!responseData.data
+          });
+          throw new Error(errorMessage);
         }
       }
     } catch (err: unknown) {
+      // Log the full error object for debugging
+      console.error(`${isSignUp ? 'Registration' : 'Login'} - Full error object:`, err);
+      
       // Extract meaningful error message
       const isAxiosError = err && typeof err === 'object' && 'response' in err;
+      const isRegularError = err instanceof Error;
       let message = isSignUp ? 'Registration failed' : 'Login failed';
       
       if (isAxiosError) {
-        const axiosError = err as { response?: { data?: { message?: string } } };
-        message = axiosError.response?.data?.message || (err as Error).message || message;
+        const axiosError = err as { response?: { data?: { message?: string; success?: boolean }; status?: number }; message?: string };
         
-        // Log full error for debugging
-        console.error(`${isSignUp ? 'Registration' : 'Login'} error (full):`, axiosError.response?.data || err);
+        // Log detailed error information
+        console.error(`${isSignUp ? 'Registration' : 'Login'} - Axios error details:`, {
+          status: axiosError.response?.status,
+          responseData: axiosError.response?.data,
+          requestMessage: axiosError.message
+        });
+        
+        // Extract error message from response.data.message as requested
+        message = axiosError.response?.data?.message || axiosError.message || message;
+        
+        // Additional logging for debugging
+        console.error(`${isSignUp ? 'Registration' : 'Login'} error (full response):`, axiosError.response?.data);
+        console.error(`${isSignUp ? 'Registration' : 'Login'} error (full error):`, err);
+      } else if (isRegularError) {
+        // Handle backend validation errors (thrown from our success check above)
+        message = err.message;
+        console.error(`${isSignUp ? 'Registration' : 'Login'} - Backend validation error:`, {
+          errorMessage: err.message,
+          fullError: err
+        });
       } else {
         // Network/preflight errors
         message = 'Network error. Check server or CORS.';
-        console.error(`${isSignUp ? 'Registration' : 'Login'} error:`, err);
+        console.error(`${isSignUp ? 'Registration' : 'Login'} - Network/other error:`, {
+          errorType: typeof err,
+          errorMessage: err instanceof Error ? err.message : 'Unknown error',
+          fullError: err
+        });
       }
       
       setError(message);

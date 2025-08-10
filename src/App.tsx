@@ -163,6 +163,24 @@ function App() {
     setCurrentPage('home');
   };
 
+  const handleAuthSuccess = () => {
+    const token = localStorage.getItem('auth_token');
+    const currentUser = localStorage.getItem('current_user');
+    
+    if (token && currentUser) {
+      try {
+        const user = JSON.parse(currentUser);
+        setIsAuthenticated(true);
+        setUserType(user.role || 'buyer');
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('current_user');
+      }
+    }
+  };
+
   const handleOnboardingComplete = (data: OnboardingData) => {
     setOnboardingData(data);
     setUserOnboarded(true);
@@ -271,7 +289,7 @@ function App() {
       case 'sell':
         return <Sell />;
       case 'auth':
-        return <Auth onNavigate={handleNavigate} />;
+        return <Auth onNavigate={handleNavigate} onAuthSuccess={handleAuthSuccess} />;
       case 'platforms':
         return <Platforms onNavigate={handleNavigate} />;
       case 'listing-details':
