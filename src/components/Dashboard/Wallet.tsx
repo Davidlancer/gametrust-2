@@ -28,7 +28,7 @@ import Card from '../UI/Card';
 import Button from '../UI/Button';
 import Badge from '../UI/Badge';
 import Spinner from '../UI/Spinner';
-import { mockWalletTransactions } from '../../data/mockData';
+// Mock data removed - using state management instead
 import { useEscrow } from '../../hooks/useEscrow';
 import EscrowStatusCard from '../UI/EscrowStatusCard';
 import { ReportIssueModal, ViewReceiptModal } from '../TransactionModals';
@@ -59,7 +59,7 @@ interface BankDetails {
 }
 
 // Use enhanced transaction data from mockData
-const mockTransactions: Transaction[] = mockWalletTransactions as Transaction[];
+const mockTransactions: Transaction[] = [];
 
 const mockBankDetails: BankDetails = {
   bankName: 'GTBank',

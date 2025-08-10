@@ -1,9 +1,93 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, Quote } from 'lucide-react';
 import Card from '../UI/Card';
-import { testimonials } from '../../data/mockData';
+import { apiService } from '../../services/api';
+import { Testimonial } from '../../types';
 
 const Testimonials: React.FC = () => {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.reviews.getAll();
+        
+        // Defensive coding: ensure we always have an array
+        const reviewsData = response?.data;
+        if (Array.isArray(reviewsData)) {
+          // Transform API response to testimonials format
+           const testimonialsData = reviewsData.map((review: Record<string, unknown>) => ({
+             id: (review.id || review._id) as string,
+             user: (review.buyerUsername as string) || 'Anonymous',
+             avatar: (review.buyerAvatar as string) || 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
+             content: (review.comment as string) || 'No comment provided',
+             rating: (review.rating as number) || 5,
+             game: (review.game as string) || 'Gaming'
+           }));
+          
+          setTestimonials(testimonialsData.slice(0, 6)); // Limit to 6 testimonials
+        } else {
+          console.warn('API returned non-array data for reviews:', reviewsData);
+          setTestimonials([]);
+        }
+      } catch (err) {
+        console.error('Error fetching testimonials:', err);
+        setError('Failed to load testimonials');
+        setTestimonials([]); // Ensure testimonials is always an array
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTestimonials();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">What Our Users Say</h2>
+            <p className="text-lg text-gray-600">Loading testimonials...</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[...Array(3)].map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="bg-gray-100 rounded-lg p-6">
+                  <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full mr-3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || testimonials.length === 0) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">What Our Users Say</h2>
+            <p className="text-lg text-gray-600">
+              {error ? error : 'No testimonials available at the moment.'}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <div className="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(75,0,130,0.1),transparent_50%)] pointer-events-none"></div>

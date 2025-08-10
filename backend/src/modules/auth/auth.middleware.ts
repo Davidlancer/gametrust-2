@@ -1,136 +1,228 @@
 import { Request, Response, NextFunction } from 'express';
-import { AuthModel } from './auth.model';
-import { verifyToken } from './auth.utils';
-import { AuthRequest, ApiResponse } from '../../types';
+import jwt from 'jsonwebtoken';
+import { User } from '../../models/User';
+import { logger } from '../../utils/logger';
+import { ApiResponse } from '../../types';
 
-/**
- * Middleware to protect routes - requires valid JWT token
- */
-export const protect = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    let token: string | undefined;
-
-    // Check for token in Authorization header
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-
-    // Check if token exists
-    if (!token) {
-      const response: ApiResponse = {
-        success: false,
-        message: 'Access denied. No token provided.'
+// Extend Request interface to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: string;
+        role: string;
+        email: string;
       };
-      res.status(401).json(response);
+    }
+  }
+}
+
+// Authentication middleware
+export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      res.status(401).json({
+        success: false,
+        message: 'Access token required'
+      } as ApiResponse);
       return;
     }
 
-    try {
-      // Verify token
-      const decoded = verifyToken(token);
-      
-      // Get user from database (excluding password)
-      const user = await AuthModel.findById(decoded.id);
-      
-      if (!user) {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Token is valid but user no longer exists'
-        };
-        res.status(401).json(response);
-        return;
-      }
-
-      // Add user to request object
-      req.user = user;
-      next();
-    } catch (jwtError: any) {
-      if (jwtError.name === 'TokenExpiredError') {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Token has expired'
-        };
-        res.status(401).json(response);
-        return;
-      } else if (jwtError.name === 'JsonWebTokenError') {
-        const response: ApiResponse = {
-          success: false,
-          message: 'Invalid token'
-        };
-        res.status(401).json(response);
-        return;
-      } else {
-        throw jwtError;
-      }
-    }
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    const response: ApiResponse = {
-      success: false,
-      message: 'Authentication failed'
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as {
+      userId: string;
+      role: string;
     };
-    res.status(500).json(response);
+
+    // Find user
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid token - user not found'
+      } as ApiResponse);
+      return;
+    }
+
+    // Check if user is active and not banned
+    if (!user.isActive || user.isBanned) {
+      res.status(401).json({
+        success: false,
+        message: user.isBanned ? 'Account has been banned' : 'Account is inactive'
+      } as ApiResponse);
+      return;
+    }
+
+    // Attach user to request
+    req.user = {
+      userId: user._id.toString(),
+      role: user.role,
+      email: user.email
+    };
+
+    next();
+  } catch (error) {
+    logger.error('Authentication error:', error);
+    
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      } as ApiResponse);
+    } else if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({
+        success: false,
+        message: 'Token expired'
+      } as ApiResponse);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      } as ApiResponse);
+    }
   }
 };
 
-/**
- * Middleware to restrict access to specific roles
- */
-export const restrictTo = (...roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      const response: ApiResponse = {
-        success: false,
-        message: 'User not authenticated'
-      };
-      res.status(401).json(response);
+// Optional authentication middleware (doesn't fail if no token)
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      next();
       return;
     }
 
-    // Note: Role-based access control is disabled since User model doesn't have role field
-    // For now, all authenticated users have access
-    // TODO: Implement role-based access control when User model includes role field
+    // Verify JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as {
+      userId: string;
+      role: string;
+    };
+
+    // Find user
+    const user = await User.findById(decoded.userId);
+    if (user && user.isActive && !user.isBanned) {
+      req.user = {
+        userId: user._id.toString(),
+        role: user.role,
+        email: user.email
+      };
+    }
+
+    next();
+  } catch (error) {
+    // Silently continue without authentication
+    next();
+  }
+};
+
+// Role-based authorization middleware
+export const authorize = (...roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      } as ApiResponse);
+      return;
+    }
+
+    if (!roles.includes(req.user.role)) {
+      res.status(403).json({
+        success: false,
+        message: 'Insufficient permissions'
+      } as ApiResponse);
+      return;
+    }
 
     next();
   };
 };
 
-/**
- * Optional authentication middleware - doesn't fail if no token
- */
-export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    let token: string | undefined;
+// Admin only middleware
+export const adminOnly = authorize('admin');
 
-    // Check for token in Authorization header
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
+// Seller or admin middleware
+export const sellerOrAdmin = authorize('seller', 'admin');
 
-    // If no token, continue without user
-    if (!token) {
+// Buyer or admin middleware
+export const buyerOrAdmin = authorize('buyer', 'admin');
+
+// Owner or admin middleware (for resource ownership)
+export const ownerOrAdmin = (getResourceUserId: (req: Request) => string | Promise<string>) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        } as ApiResponse);
+        return;
+      }
+
+      // Admin can access everything
+      if (req.user.role === 'admin') {
+        next();
+        return;
+      }
+
+      // Get resource owner ID
+      const resourceUserId = await getResourceUserId(req);
+      
+      if (req.user.userId !== resourceUserId) {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied - not the owner'
+        } as ApiResponse);
+        return;
+      }
+
       next();
+    } catch (error) {
+      logger.error('Owner authorization error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      } as ApiResponse);
+    }
+  };
+};
+
+// Rate limiting middleware for sensitive operations
+export const sensitiveOperationLimit = (req: Request, res: Response, next: NextFunction): void => {
+  // This would typically use Redis or in-memory store
+  // For now, we'll just pass through
+  next();
+};
+
+// Email verification required middleware
+export const requireEmailVerification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      } as ApiResponse);
       return;
     }
 
-    try {
-      // Verify token
-      const decoded = verifyToken(token);
-      
-      // Get user from database
-      const user = await AuthModel.findById(decoded.id);
-      
-      if (user) {
-        req.user = user;
-      }
-    } catch (jwtError) {
-      // Token invalid, but continue without user
-      console.log('Optional auth - invalid token:', jwtError);
+    const user = await User.findById(req.user.userId);
+    if (!user || !user.isEmailVerified) {
+      res.status(403).json({
+        success: false,
+        message: 'Email verification required'
+      } as ApiResponse);
+      return;
     }
 
     next();
   } catch (error) {
-    console.error('Optional auth middleware error:', error);
-    next();
+    logger.error('Email verification check error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
   }
 };

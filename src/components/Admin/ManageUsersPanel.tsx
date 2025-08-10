@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import { useActivityLog } from '../../context/ActivityLogContext';
+import { apiService } from '../../services/api';
 import {
   UsersIcon,
   ArrowLeftIcon,
@@ -29,8 +30,22 @@ interface User {
 
 const ManageUsersPanel: React.FC<ManageUsersPanelProps> = ({ onClose }) => {
   const { addActivity } = useActivityLog();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  const mockUsers: User[] = [
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await apiService.admin.getUsers();
+        setUsers(response);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        setError('Failed to load users');
+        // Fallback to mock data for development
+        setUsers([
     {
       id: 'U001',
       username: 'user123',
@@ -81,7 +96,14 @@ const ManageUsersPanel: React.FC<ManageUsersPanelProps> = ({ onClose }) => {
       lastActive: '2024-01-18',
       totalTransactions: 1
     }
-  ];
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const handleBan = (user: User) => {
     addActivity(`User ${user.username} has been banned`, 'user', 'warning');
@@ -122,6 +144,30 @@ const ManageUsersPanel: React.FC<ManageUsersPanelProps> = ({ onClose }) => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="primary">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -147,17 +193,17 @@ const ManageUsersPanel: React.FC<ManageUsersPanelProps> = ({ onClose }) => {
         </div>
         <div className="flex items-center space-x-2">
           <span className="bg-green-500 text-white text-sm font-bold px-3 py-1 rounded-full">
-            {mockUsers.filter(u => u.status === 'active').length} Active
+            {users.filter((u: User) => u.status === 'active').length} Active
           </span>
           <span className="bg-yellow-500 text-white text-sm font-bold px-3 py-1 rounded-full">
-            {mockUsers.filter(u => u.status === 'suspended').length} Suspended
+            {users.filter((u: User) => u.status === 'suspended').length} Suspended
           </span>
         </div>
       </div>
 
       {/* Users List */}
       <div className="grid gap-4">
-        {mockUsers.map((user, index) => (
+        {users.map((user: User, index: number) => (
           <motion.div
             key={user.id}
             initial={{ opacity: 0, x: -20 }}

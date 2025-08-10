@@ -7,6 +7,10 @@ export interface User {
   name?: string;
   email: string;
   password?: string;
+  role?: string;
+  isEmailVerified?: boolean;
+  refreshToken?: string | null;
+  lastLogin?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,8 +21,27 @@ export interface AuthTokens {
 }
 
 export interface AuthRequest extends Request {
-  user?: User;
+  user?: {
+    userId: string;
+    role: string;
+    email: string;
+  };
 }
+
+// Extend Express Request to include user info
+/* eslint-disable */
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: string;
+        role: string;
+        email: string;
+      };
+    }
+  }
+}
+/* eslint-enable */
 
 export interface RegisterData {
   firstName?: string;
@@ -40,11 +63,33 @@ export interface SocialAuthData {
   name: string;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
-  message: string;
+  message?: string;
   data?: T;
+  error?: string;
   errors?: string[];
+}
+
+export interface PaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationInfo;
+}
+
+export interface MongoFilter {
+  [key: string]: unknown;
+}
+
+export interface SortOptions {
+  [key: string]: 1 | -1;
 }
 
 export interface TokenPayload {

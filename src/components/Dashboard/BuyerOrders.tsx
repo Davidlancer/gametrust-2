@@ -260,20 +260,30 @@ const BuyerOrders: React.FC = () => {
         <div className="hidden md:flex items-center gap-2">
           <button
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            className="p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.08] transition-all duration-200"
+            className="
+              p-3 md:p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] 
+              border border-white/[0.08] transition-all duration-200
+              min-h-[44px] min-w-[44px] flex items-center justify-center
+            "
+            aria-label={`Switch to ${viewMode === 'grid' ? 'list' : 'grid'} view`}
           >
             {viewMode === 'grid' ? (
-              <ListBulletIcon className="w-4 h-4" />
+              <ListBulletIcon className="w-5 h-5 md:w-4 md:h-4" />
             ) : (
-              <Squares2X2Icon className="w-4 h-4" />
+              <Squares2X2Icon className="w-5 h-5 md:w-4 md:h-4" />
             )}
           </button>
           
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.08] transition-all duration-200"
+            className="
+              p-3 md:p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] 
+              border border-white/[0.08] transition-all duration-200
+              min-h-[44px] min-w-[44px] flex items-center justify-center
+            "
+            aria-label="Toggle filters"
           >
-            <FunnelIcon className="w-4 h-4" />
+            <FunnelIcon className="w-5 h-5 md:w-4 md:h-4" />
           </button>
         </div>
       </div>

@@ -1,547 +1,584 @@
 import { Request, Response } from 'express';
-import { OAuth2Client } from 'google-auth-library';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import crypto from 'crypto';
-import { UserModel } from '../user/user.model';
-import { SessionModel } from '../session/session.model';
-import { ProfileModel } from '../profile/profile.model';
-import { generateAccessToken, generateRefreshToken } from './auth.utils';
-import { ApiResponse, RegisterData, LoginData, SocialAuthData } from '../../types';
+import { User } from '../../models/User';
+import { logger } from '../../utils/logger';
+import { sendEmail } from '../../utils/email';
+import { ApiResponse } from '../../types';
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+// Generate JWT token
+const generateToken = (userId: string, role: string): string => {
+  const secret = process.env.JWT_SECRET || 'your-secret-key';
+  const payload = { userId, role };
+  return jwt.sign(payload, secret, { expiresIn: process.env.JWT_EXPIRE || '7d' } as SignOptions);
+};
 
-export class AuthController {
-  static async register(req: Request, res: Response): Promise<void> {
-    try {
-      const { firstName, lastName, email, password, confirmPassword }: RegisterData = req.body;
-      
-      // Validate passwords match
-      if (password !== confirmPassword) {
-        res.status(400).json({
-          success: false,
-          message: 'Passwords do not match'
-        } as ApiResponse<null>);
-        return;
-      }
-      
-      // Check if user already exists
-      const existingUser = await UserModel.findByEmail(email);
-      if (existingUser) {
-        res.status(400).json({
-          success: false,
-          message: 'User already exists with this email'
-        } as ApiResponse<null>);
-        return;
-      }
-      
-      // Create new user
-      const user = await UserModel.createUser({ firstName, lastName, email, password });
-      
-      // Generate tokens
-      const accessToken = generateAccessToken({ id: user.id, email: user.email, name: user?.name ?? `${firstName} ${lastName}` });
-      const refreshToken = generateRefreshToken({ id: user.id, email: user.email, name: user?.name ?? `${firstName} ${lastName}` });
-      
-      // Create session
-      await SessionModel.createSession({
-        userId: user.id,
-        token: accessToken,
-        refreshToken,
-        userAgent: req.get('User-Agent'),
-        ipAddress: req.ip,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-      });
-      
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        data: {
-          user: {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            // profile: user.profile,
-            createdAt: user.createdAt
-          },
-          accessToken,
-          refreshToken
-        }
-      } as ApiResponse<any>);
-    } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({
+// Generate refresh token
+const generateRefreshToken = (userId: string): string => {
+  return jwt.sign(
+    { userId },
+    process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
+    { expiresIn: '30d' }
+  );
+};
+
+// Register new user
+export const register = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password, firstName, lastName, username, role = 'buyer' } = req.body;
+    
+    // Log registration attempt (mask password)
+    console.info('Register attempt', {
+      email,
+      firstName,
+      lastName,
+      username,
+      origin: req.get('origin')
+    });
+
+    // 1. Input validation - check required fields
+    if (!email || !firstName || !lastName || !password) {
+      res.status(400).json({
         success: false,
-        message: 'Internal server error'
-      } as ApiResponse<null>);
+        message: 'Email, firstName, lastName and password are required'
+      } as ApiResponse);
+      return;
     }
-  }
 
-  static async login(req: Request, res: Response): Promise<void> {
+    // 2. Password complexity validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol'
+      } as ApiResponse);
+      return;
+    }
+
+    // 3. Email uniqueness check
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }]
+    });
+
+    if (existingUser) {
+      if (existingUser.email === email) {
+        res.status(400).json({
+          success: false,
+          message: 'Email is already registered'
+        } as ApiResponse);
+        return;
+      } else {
+        res.status(400).json({
+          success: false,
+          message: 'Username is already taken'
+        } as ApiResponse);
+        return;
+      }
+    }
+
+    // 4. Create new user (password will be hashed by pre-save middleware)
+    const user = new User({
+      email,
+      password,
+      firstName,
+      lastName,
+      username,
+      role,
+      isActive: true // Mark account active by default
+    });
+
+    // Generate email verification token
+    const verificationToken = user.generateEmailVerificationToken();
+    await user.save();
+
+    // Send verification email
     try {
-      const { email, password }: LoginData = req.body;
-      
-      // Find user by email
-      const user = await UserModel.findByEmail(email);
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid credentials'
-        } as ApiResponse<null>);
-        return;
-      }
-      
-      // Verify password
-      const isValidPassword = await UserModel.verifyPassword(password, user.password!);
-      if (!isValidPassword) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid credentials'
-        } as ApiResponse<null>);
-        return;
-      }
-      
-      // Generate tokens
-      const accessToken = generateAccessToken({ id: user.id, email: user.email, name: user?.name ?? `${user.firstName} ${user.lastName}` });
-      const refreshToken = generateRefreshToken({ id: user.id, email: user.email, name: user?.name ?? `${user.firstName} ${user.lastName}` });
-      
-      // Create session
-      await SessionModel.createSession({
-        userId: user.id,
-        token: accessToken,
-        refreshToken,
-        userAgent: req.get('User-Agent'),
-        ipAddress: req.ip,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+      await sendEmail({
+        to: email,
+        subject: 'Verify your GameTrust account',
+        template: 'email-verification',
+        data: {
+          firstName,
+          verificationToken,
+          verificationUrl: `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`
+        }
       });
+    } catch (emailError) {
+      logger.error('Failed to send verification email:', emailError);
+    }
+
+    // Generate tokens
+    const token = generateToken(user._id, user.role);
+
+    // 5. Success response (201)
+    res.status(201).json({
+      success: true,
+      message: 'User registered',
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username
+      },
+      token
+    } as ApiResponse);
+
+    logger.info(`New user registered: ${email}`);
+  } catch (error) {
+    // Log error with stack trace (mask password)
+    console.error('Registration error:', {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      requestBody: { ...req.body, password: '***' }
+    });
+    
+    logger.error('Registration error:', {
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      requestBody: { ...req.body, password: '***' }
+    });
+    
+    // Handle specific MongoDB errors
+    if (error instanceof Error) {
+      if (error.message.includes('E11000')) {
+        const duplicateField = error.message.includes('email') ? 'Email' : 'Username';
+        const errorMessage = duplicateField === 'Email' ? 'Email is already registered' : 'Username is already taken';
+        res.status(400).json({
+          success: false,
+          message: errorMessage
+        } as ApiResponse);
+        return;
+      }
       
+      if (error.name === 'ValidationError') {
+        const validationError = error as unknown as { errors: Record<string, { message: string }> };
+        const firstErrorMessage = Object.values(validationError.errors)[0];
+        const errorMessage = firstErrorMessage?.message || 'Invalid input data';
+        res.status(400).json({
+          success: false,
+          message: errorMessage
+        } as ApiResponse);
+        return;
+      }
+    }
+    
+    // 6. Unexpected server error (500)
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
+  }
+};
+
+// Login user
+export const login = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    
+    console.log('Login attempt:', { email });
+
+    // Find user and include password for comparison
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user || !user.password) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      } as ApiResponse);
+      return;
+    }
+
+    // Check if user is active and not banned
+    if (!user.isActive || user.isBanned) {
+      res.status(401).json({
+        success: false,
+        message: user.isBanned ? 'Account has been banned' : 'Account is inactive'
+      } as ApiResponse);
+      return;
+    }
+
+    // Compare password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      } as ApiResponse);
+      return;
+    }
+
+    // Update last login
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    // Generate tokens
+    const token = generateToken(user._id, user.role);
+    const refreshToken = generateRefreshToken(user._id);
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          avatar: user.avatar
+        },
+        token,
+        refreshToken
+      }
+    } as ApiResponse);
+
+    logger.info(`User logged in: ${email}`);
+  } catch (error) {
+    logger.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
+  }
+};
+
+// Refresh token
+export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      res.status(401).json({
+        success: false,
+        message: 'Refresh token required'
+      } as ApiResponse);
+      return;
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'your-refresh-secret') as { userId: string };
+    
+    // Find user
+    const user = await User.findById(decoded.userId);
+    if (!user || !user.isActive || user.isBanned) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token'
+      } as ApiResponse);
+      return;
+    }
+
+    // Generate new tokens
+    const newToken = generateToken(user._id, user.role);
+    const newRefreshToken = generateRefreshToken(user._id);
+
+    res.json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        token: newToken,
+        refreshToken: newRefreshToken
+      }
+    } as ApiResponse);
+  } catch (error) {
+    logger.error('Refresh token error:', error);
+    res.status(401).json({
+      success: false,
+      message: 'Invalid refresh token'
+    } as ApiResponse);
+  }
+};
+
+// Forgot password
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      } as ApiResponse);
+      return;
+    }
+
+    // Generate reset token
+    const resetToken = user.generatePasswordResetToken();
+    await user.save();
+
+    // Send reset email
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Reset your GameTrust password',
+        template: 'password-reset',
+        data: {
+          firstName: user.firstName,
+          resetToken,
+          resetUrl: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`
+        }
+      });
+
       res.json({
         success: true,
-        message: 'Login successful',
-        data: {
-          user: {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            // profile: user.profile,
-            createdAt: user.createdAt
-          },
-          accessToken,
-          refreshToken
-        }
-      } as ApiResponse<any>);
-    } catch (error) {
-      console.error('Login error:', error);
+        message: 'Password reset link sent to your email'
+      } as ApiResponse);
+    } catch (emailError) {
+      logger.error('Failed to send reset email:', emailError);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
-      } as ApiResponse<null>);
+        message: 'Failed to send reset email'
+      } as ApiResponse);
     }
+  } catch (error) {
+    logger.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
   }
+};
 
-  static async googleAuth(req: Request, res: Response): Promise<void> {
-    try {
-      const { token }: SocialAuthData = req.body;
-      
-      // Verify Google token
-      const ticket = await googleClient.verifyIdToken({
-        idToken: token,
-        audience: process.env.GOOGLE_CLIENT_ID
-      });
-      
-      const payload = ticket.getPayload();
-      if (!payload) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid Google token'
-        } as ApiResponse<null>);
-        return;
-      }
-      
-      const { sub: providerId, email, given_name: firstName, family_name: lastName, picture: avatar } = payload;
-      
-      if (!email) {
-        res.status(400).json({
-          success: false,
-          message: 'Email not provided by Google'
-        } as ApiResponse<null>);
-        return;
-      }
-      
-      // Check if user exists with social account
-      let user = await UserModel.findBySocialAccount('google', providerId);
-      
-      if (!user) {
-        // Check if user exists with email
-        user = await UserModel.findByEmail(email);
-        
-        if (!user) {
-          // Create new user
-          user = await UserModel.createSocialUser({
-            email,
-            firstName: firstName || 'User',
-            lastName,
-            provider: 'google',
-            providerId,
-            avatar
-          });
-        }
-      }
-      
-      // Generate tokens
-      const accessToken = generateAccessToken({ id: user.id, email: user.email, name: user?.name ?? `${user.firstName} ${user.lastName}` });
-      const refreshToken = generateRefreshToken({ id: user.id, email: user.email, name: user?.name ?? `${user.firstName} ${user.lastName}` });
-      
-      // Create session
-      await SessionModel.createSession({
-        userId: user.id,
-        token: accessToken,
-        refreshToken,
-        userAgent: req.get('User-Agent'),
-        ipAddress: req.ip,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-      });
-      
-      res.json({
-        success: true,
-        message: 'Google authentication successful',
-        data: {
-          user: {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            // profile: user.profile,
-            createdAt: user.createdAt
-          },
-          accessToken,
-          refreshToken
-        }
-      } as ApiResponse<any>);
-    } catch (error) {
-      console.error('Google auth error:', error);
-      res.status(500).json({
+// Reset password
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token, password } = req.body;
+
+    // Hash the token to compare with stored hash
+     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find user with valid reset token
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: new Date() }
+    }).select('+passwordResetToken +passwordResetExpires');
+
+    if (!user) {
+      res.status(400).json({
         success: false,
-        message: 'Google authentication failed'
-      } as ApiResponse<null>);
+        message: 'Invalid or expired reset token'
+      } as ApiResponse);
+      return;
     }
-  }
 
-  static async appleAuth(req: Request, res: Response): Promise<void> {
-    try {
-      const { token, email, name }: SocialAuthData = req.body;
-      
-      // Decode Apple JWT token (simplified - in production, verify signature)
-      const decoded = jwt.decode(token) as any;
-      if (!decoded || !decoded.sub) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid Apple token'
-        } as ApiResponse<null>);
-        return;
-      }
-      
-      const providerId = decoded.sub;
-      const userEmail = email || decoded.email;
-      
-      if (!userEmail) {
-        res.status(400).json({
-          success: false,
-          message: 'Email not provided by Apple'
-        } as ApiResponse<null>);
-        return;
-      }
-      
-      // Check if user exists with social account
-      let user = await UserModel.findBySocialAccount('apple', providerId);
-      
-      if (!user) {
-        // Check if user exists with email
-        user = await UserModel.findByEmail(userEmail);
-        
-        if (!user) {
-          // Create new user
-          const [firstName, lastName] = (name || 'User').split(' ');
-          user = await UserModel.createSocialUser({
-            email: userEmail,
-            firstName: firstName || 'User',
-            lastName,
-            provider: 'apple',
-            providerId
-          });
-        }
-      }
-      
-      // Generate tokens
-      const accessToken = generateAccessToken({ id: user.id, email: user.email, name: user?.name ?? `${user.firstName} ${user.lastName}` });
-      const refreshToken = generateRefreshToken({ id: user.id, email: user.email, name: user?.name ?? `${user.firstName} ${user.lastName}` });
-      
-      // Create session
-      await SessionModel.createSession({
-        userId: user.id,
-        token: accessToken,
-        refreshToken,
-        userAgent: req.get('User-Agent'),
-        ipAddress: req.ip,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-      });
-      
-      res.json({
-        success: true,
-        message: 'Apple authentication successful',
-        data: {
-          user: {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            // profile: user.profile,
-            createdAt: user.createdAt
-          },
-          accessToken,
-          refreshToken
-        }
-      } as ApiResponse<any>);
-    } catch (error) {
-      console.error('Apple auth error:', error);
-      res.status(500).json({
+    // Update password and clear reset token
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    } as ApiResponse);
+
+    logger.info(`Password reset for user: ${user.email}`);
+  } catch (error) {
+    logger.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
+  }
+};
+
+// Verify email
+export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.body;
+
+    // Hash the token to compare with stored hash
+     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find user with verification token
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken
+    }).select('+emailVerificationToken');
+
+    if (!user) {
+      res.status(400).json({
         success: false,
-        message: 'Apple authentication failed'
-      } as ApiResponse<null>);
+        message: 'Invalid verification token'
+      } as ApiResponse);
+      return;
     }
+
+    // Update user verification status
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully'
+    } as ApiResponse);
+
+    logger.info(`Email verified for user: ${user.email}`);
+  } catch (error) {
+    logger.error('Email verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
   }
+};
 
-  static async refreshToken(req: Request, res: Response): Promise<void> {
-     try {
-       const { refreshToken } = req.body;
-       
-       if (!refreshToken) {
-         res.status(400).json({
-           success: false,
-           message: 'Refresh token is required'
-         } as ApiResponse<null>);
-         return;
-       }
-       
-       // Find session by refresh token
-       const session = await SessionModel.findByRefreshToken(refreshToken);
-       if (!session || !session.isActive) {
-         res.status(401).json({
-           success: false,
-           message: 'Invalid refresh token'
-         } as ApiResponse<null>);
-         return;
-       }
-       
-       // Generate new tokens
-       const newAccessToken = generateAccessToken({ id: session.userId, email: session.user.email, name: session.user.name });
-       const newRefreshToken = generateRefreshToken({ id: session.userId, email: session.user.email, name: session.user.name });
-       
-       // Update session
-       await SessionModel.refreshSession(refreshToken, {
-         token: newAccessToken,
-         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
-       });
-       
-       res.json({
-         success: true,
-         message: 'Token refreshed successfully',
-         data: {
-           accessToken: newAccessToken,
-           refreshToken: newRefreshToken
-         }
-       } as ApiResponse<any>);
-     } catch (error) {
-       console.error('Refresh token error:', error);
-       res.status(500).json({
-         success: false,
-         message: 'Token refresh failed'
-       } as ApiResponse<null>);
-     }
-   }
+// Get current user profile
+export const getProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as { user: { userId: string } }).user.userId;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      } as ApiResponse);
+      return;
+    }
 
-   static async logout(req: Request, res: Response): Promise<void> {
-     try {
-       const token = req.headers.authorization?.replace('Bearer ', '');
-       
-       if (token) {
-         await SessionModel.deactivateSession(token);
-       }
-       
-       res.json({
-         success: true,
-         message: 'Logged out successfully'
-       } as ApiResponse<null>);
-     } catch (error) {
-       console.error('Logout error:', error);
-       res.status(500).json({
-         success: false,
-         message: 'Logout failed'
-       } as ApiResponse<null>);
-     }
-   }
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          avatar: user.avatar,
+          phone: user.phone,
+          address: user.address,
+          preferences: user.preferences,
+          stats: user.stats,
+          createdAt: user.createdAt
+        }
+      }
+    } as ApiResponse);
+  } catch (error) {
+    logger.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
+  }
+};
 
-   static async logoutAll(req: Request, res: Response): Promise<void> {
-     try {
-       const userId = (req as any).user.userId;
-       const currentToken = req.headers.authorization?.replace('Bearer ', '');
-       
-       await SessionModel.deactivateUserSessions(userId, currentToken);
-       
-       res.json({
-         success: true,
-         message: 'Logged out from all devices successfully'
-       } as ApiResponse<null>);
-     } catch (error) {
-       console.error('Logout all error:', error);
-       res.status(500).json({
-         success: false,
-         message: 'Logout from all devices failed'
-       } as ApiResponse<null>);
-     }
-   }
+// Update user profile
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as { user: { userId: string } }).user.userId;
+    const updates = req.body;
 
-   static async getProfile(req: Request, res: Response): Promise<void> {
-     try {
-       const userId = (req as any).user.userId;
-       
-       const user = await UserModel.findById(userId);
-       if (!user) {
-         res.status(404).json({
-           success: false,
-           message: 'User not found'
-         } as ApiResponse<null>);
-         return;
-       }
-       
-       res.json({
-         success: true,
-         message: 'User profile retrieved successfully',
-         data: {
-           id: user.id,
-           firstName: user.firstName,
-           lastName: user.lastName,
-           email: user.email,
-          //  isEmailVerified: user.isEmailVerified,
-          //  profile: user.profile,
-          //  socialAccounts: user.socialAccounts,
-           createdAt: user.createdAt,
-           updatedAt: user.updatedAt
-         }
-       } as ApiResponse<any>);
-     } catch (error) {
-       console.error('Get profile error:', error);
-       res.status(500).json({
-         success: false,
-         message: 'Internal server error'
-       } as ApiResponse<null>);
-     }
-   }
+    // Remove sensitive fields that shouldn't be updated via this endpoint
+    delete updates.password;
+    delete updates.email;
+    delete updates.role;
+    delete updates.isEmailVerified;
+    delete updates.isActive;
+    delete updates.isBanned;
 
-   static async updateProfile(req: Request, res: Response): Promise<void> {
-     try {
-       const userId = (req as any).user.userId;
-       const profileData = req.body;
-       
-       const updatedProfile = await ProfileModel.updateProfile(userId, profileData);
-       
-       res.json({
-         success: true,
-         message: 'Profile updated successfully',
-         data: updatedProfile
-       } as ApiResponse<any>);
-     } catch (error) {
-       console.error('Update profile error:', error);
-       res.status(500).json({
-         success: false,
-         message: 'Profile update failed'
-       } as ApiResponse<null>);
-     }
-   }
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
 
-   static async getSessions(req: Request, res: Response): Promise<void> {
-     try {
-       const userId = (req as any).user.userId;
-       
-       const sessions = await SessionModel.findUserSessions(userId);
-       
-       res.json({
-         success: true,
-         message: 'Sessions retrieved successfully',
-         data: sessions.map(session => ({
-           id: session.id,
-           userAgent: session.userAgent,
-           ipAddress: session.ipAddress,
-           createdAt: session.createdAt,
-           expiresAt: session.expiresAt,
-           isActive: session.isActive
-         }))
-       } as ApiResponse<any>);
-     } catch (error) {
-       console.error('Get sessions error:', error);
-       res.status(500).json({
-         success: false,
-         message: 'Failed to retrieve sessions'
-       } as ApiResponse<null>);
-     }
-   }
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      } as ApiResponse);
+      return;
+    }
 
-   static async deleteSession(req: Request, res: Response): Promise<void> {
-     try {
-       const { sessionId } = req.params;
-       const userId = (req as any).user.userId;
-       
-       // Find session and verify ownership
-       const session = await SessionModel.findByToken(sessionId);
-       if (!session || session.userId !== userId) {
-         res.status(404).json({
-           success: false,
-           message: 'Session not found'
-         } as ApiResponse<null>);
-         return;
-       }
-       
-       await SessionModel.deactivateSession(sessionId);
-       
-       res.json({
-         success: true,
-         message: 'Session deleted successfully'
-       } as ApiResponse<null>);
-     } catch (error) {
-       console.error('Delete session error:', error);
-       res.status(500).json({
-         success: false,
-         message: 'Failed to delete session'
-       } as ApiResponse<null>);
-     }
-   }
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: { user }
+    } as ApiResponse);
 
-   // Placeholder methods for email verification and password reset
-   static async sendVerificationEmail(req: Request, res: Response): Promise<void> {
-     res.status(501).json({
-       success: false,
-       message: 'Email verification not implemented yet'
-     } as ApiResponse<null>);
-   }
+    logger.info(`Profile updated for user: ${user.email}`);
+  } catch (error) {
+    logger.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
+  }
+};
 
-   static async verifyEmail(req: Request, res: Response): Promise<void> {
-     res.status(501).json({
-       success: false,
-       message: 'Email verification not implemented yet'
-     } as ApiResponse<null>);
-   }
+// Change password
+export const changePassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as { user: { userId: string } }).user.userId;
+    const { currentPassword, newPassword } = req.body;
 
-   static async forgotPassword(req: Request, res: Response): Promise<void> {
-     res.status(501).json({
-       success: false,
-       message: 'Password reset not implemented yet'
-     } as ApiResponse<null>);
-   }
+    // Find user with password
+    const user = await User.findById(userId).select('+password');
+    if (!user || !user.password) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      } as ApiResponse);
+      return;
+    }
 
-   static async resetPassword(req: Request, res: Response): Promise<void> {
-     res.status(501).json({
-       success: false,
-       message: 'Password reset not implemented yet'
-     } as ApiResponse<null>);
-   }
- }
+    // Verify current password
+    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      } as ApiResponse);
+      return;
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    } as ApiResponse);
+
+    logger.info(`Password changed for user: ${user.email}`);
+  } catch (error) {
+    logger.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
+  }
+};
+
+// Logout user
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // In a stateless JWT system, logout is handled client-side by removing the token
+    // However, we can log the logout event for security purposes
+    const userId = (req as { user?: { userId: string } }).user?.userId;
+    
+    if (userId) {
+      logger.info(`User logged out: ${userId}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    } as ApiResponse);
+  } catch (error) {
+    logger.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    } as ApiResponse);
+  }
+};

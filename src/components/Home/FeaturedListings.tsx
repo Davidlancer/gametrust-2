@@ -1,14 +1,100 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, Star, Eye, TrendingUp, Zap } from 'lucide-react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
-import { featuredListings } from '../../data/mockData';
+import { apiService } from '../../services/api';
+import { GameAccount } from '../../types';
 
 interface FeaturedListingsProps {
   onNavigate: (page: string, listingId?: string) => void;
 }
 
 const FeaturedListings: React.FC<FeaturedListingsProps> = ({ onNavigate }) => {
+  const [listings, setListings] = useState<GameAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchFeaturedListings = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.products.getAll({ featured: true, limit: 6 });
+        // Defensive coding: ensure we always have an array
+        const listingsData = response?.data;
+        if (Array.isArray(listingsData)) {
+          setListings(listingsData.slice(0, 6)); // Limit to 6 featured items
+        } else {
+          console.warn('API returned non-array data:', listingsData);
+          setListings([]);
+        }
+      } catch (err) {
+        console.error('Error fetching featured listings:', err);
+        setError('Failed to load featured listings');
+        setListings([]); // Ensure listings is always an array
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedListings();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Listings</h2>
+            <p className="text-lg text-gray-600">Loading premium gaming accounts...</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-8 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Listings</h2>
+            <p className="text-lg text-red-600 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="primary">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (listings.length === 0) {
+    return (
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Listings</h2>
+            <p className="text-lg text-gray-600 mb-4">No featured listings available at the moment.</p>
+            <Button onClick={() => onNavigate('marketplace')} variant="primary">
+              Browse All Listings
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
   return (
     <div className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
       {/* Background decorative elements */}
@@ -56,7 +142,7 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ onNavigate }) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-8">
-          {featuredListings.map((listing, index) => (
+          {listings.map((listing: GameAccount, index: number) => (
             <Card 
               key={listing.id} 
               hover 
@@ -147,7 +233,7 @@ const FeaturedListings: React.FC<FeaturedListingsProps> = ({ onNavigate }) => {
                   <div className="space-y-2">
                     <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Key Features</h4>
                     <div className="flex flex-wrap gap-1.5">
-                      {listing.features.slice(0, 2).map((feature, featureIndex) => (
+                      {listing.features?.slice(0, 2).map((feature: string, featureIndex: number) => (
                         <div 
                           key={featureIndex}
                           className="px-2 py-1 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-300 text-xs rounded-md font-medium backdrop-blur-sm hover:from-indigo-500/30 hover:to-purple-500/30 transition-all duration-200"

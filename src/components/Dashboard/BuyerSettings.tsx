@@ -984,13 +984,25 @@ const BuyerSettings: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => toggleNotification('emailNotifications', key)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                  enabled ? 'bg-blue-500' : 'bg-gray-600'
-                }`}
+                className={`
+                  relative inline-flex h-7 w-12 items-center rounded-full 
+                  transition-colors duration-200 focus:outline-none 
+                  focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900
+                  min-h-[44px] min-w-[44px] flex items-center justify-center
+                  md:min-h-0 md:min-w-0
+                  ${
+                    enabled 
+                      ? 'bg-blue-500 focus:ring-blue-500/50' 
+                      : 'bg-gray-600 focus:ring-gray-500'
+                  }
+                `}
+                aria-checked={enabled}
+                role="switch"
               >
                 <motion.span
-                  animate={{ x: enabled ? 20 : 2 }}
-                  className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  animate={{ x: enabled ? 20 : 4 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  className="inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform"
                 />
               </motion.button>
             </div>
@@ -1026,13 +1038,25 @@ const BuyerSettings: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => toggleNotification('pushNotifications', key)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                  enabled ? 'bg-green-500' : 'bg-gray-600'
-                }`}
+                className={`
+                  relative inline-flex h-7 w-12 items-center rounded-full 
+                  transition-colors duration-200 focus:outline-none 
+                  focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900
+                  min-h-[44px] min-w-[44px] flex items-center justify-center
+                  md:min-h-0 md:min-w-0
+                  ${
+                    enabled 
+                      ? 'bg-green-500 focus:ring-green-500/50' 
+                      : 'bg-gray-600 focus:ring-gray-500'
+                  }
+                `}
+                aria-checked={enabled}
+                role="switch"
               >
                 <motion.span
-                  animate={{ x: enabled ? 20 : 2 }}
-                  className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  animate={{ x: enabled ? 20 : 4 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  className="inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform"
                 />
               </motion.button>
             </div>

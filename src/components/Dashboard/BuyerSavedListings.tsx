@@ -1263,25 +1263,35 @@ const BuyerSavedListingsContent: React.FC = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* View Toggle */}
+              {/* View Toggle - Mobile Optimized */}
               <div className="flex items-center bg-gray-800/50 border border-gray-700/50 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'grid' 
-                      ? 'bg-indigo-500/20 text-indigo-400' 
-                      : 'text-gray-400 hover:text-gray-300'
-                  }`}
+                  className={`
+                    p-3 md:p-2 rounded-md transition-colors 
+                    min-h-[44px] min-w-[44px] flex items-center justify-center
+                    ${
+                      viewMode === 'grid' 
+                        ? 'bg-indigo-500/20 text-indigo-400' 
+                        : 'text-gray-400 hover:text-gray-300'
+                    }
+                  `}
+                  aria-label="Switch to grid view"
                 >
                   <Squares2X2Icon className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'list' 
-                      ? 'bg-indigo-500/20 text-indigo-400' 
-                      : 'text-gray-400 hover:text-gray-300'
-                  }`}
+                  className={`
+                    p-3 md:p-2 rounded-md transition-colors 
+                    min-h-[44px] min-w-[44px] flex items-center justify-center
+                    ${
+                      viewMode === 'list' 
+                        ? 'bg-indigo-500/20 text-indigo-400' 
+                        : 'text-gray-400 hover:text-gray-300'
+                    }
+                  `}
+                  aria-label="Switch to list view"
                 >
                   <ListBulletIcon className="w-5 h-5" />
                 </button>

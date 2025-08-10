@@ -311,14 +311,27 @@ const Settings: React.FC = () => {
   const ToggleSwitch: React.FC<{ checked: boolean; onChange: (checked: boolean) => void }> = ({ checked, onChange }) => (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#00FFB2] focus:ring-offset-2 focus:ring-offset-gray-900 ${
-        checked ? 'bg-[#00FFB2]' : 'bg-gray-600'
-      }`}
+      className={`
+        relative inline-flex h-7 w-12 items-center rounded-full 
+        transition-colors duration-200 focus:outline-none 
+        focus:ring-2 focus:ring-[#00FFB2] focus:ring-offset-2 focus:ring-offset-gray-900
+        min-h-[44px] min-w-[44px] flex items-center justify-center
+        md:min-h-0 md:min-w-0
+        ${
+          checked ? 'bg-[#00FFB2]' : 'bg-gray-600'
+        }
+      `}
+      aria-checked={checked}
+      role="switch"
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
+        className={`
+          inline-block h-5 w-5 transform rounded-full bg-white 
+          shadow-lg transition-transform duration-200
+          ${
+            checked ? 'translate-x-5' : 'translate-x-1'
+          }
+        `}
       />
     </button>
   );

@@ -1,18 +1,19 @@
 // Utility functions to test the Role Switcher functionality
 
 /**
- * Sets up a mock user with both buyer and seller roles for testing
+ * Sets up a test user with both buyer and seller roles for testing
  */
 export const setupDualRoleUser = () => {
   // Set up authenticated user
-  const mockUser = {
-    isAuthenticated: true,
+  const testUser = {
+    id: 'test_user_001',
     username: 'TestUser',
-    userType: 'buyer',
-    email: 'test@gametrust.com'
+    email: 'test@gametrust.com',
+    role: 'buyer'
   };
   
-  localStorage.setItem('mockUser', JSON.stringify(mockUser));
+  localStorage.setItem('auth_token', 'test_token_123');
+  localStorage.setItem('current_user', JSON.stringify(testUser));
   
   // Set up onboarding completion
   localStorage.setItem('onboardingComplete', 'true');
@@ -34,17 +35,18 @@ export const setupDualRoleUser = () => {
 };
 
 /**
- * Sets up a mock user with only buyer role
+ * Sets up a test user with only buyer role
  */
 export const setupBuyerOnlyUser = () => {
-  const mockUser = {
-    isAuthenticated: true,
+  const testUser = {
+    id: 'buyer_user_001',
     username: 'BuyerUser',
-    userType: 'buyer',
-    email: 'buyer@gametrust.com'
+    email: 'buyer@gametrust.com',
+    role: 'buyer'
   };
   
-  localStorage.setItem('mockUser', JSON.stringify(mockUser));
+  localStorage.setItem('auth_token', 'buyer_token_123');
+  localStorage.setItem('current_user', JSON.stringify(testUser));
   localStorage.setItem('onboardingComplete', 'true');
   
   const onboardingData = {
@@ -62,17 +64,18 @@ export const setupBuyerOnlyUser = () => {
 };
 
 /**
- * Sets up a mock user with only seller role
+ * Sets up a test user with only seller role
  */
 export const setupSellerOnlyUser = () => {
-  const mockUser = {
-    isAuthenticated: true,
+  const testUser = {
+    id: 'seller_user_001',
     username: 'SellerUser',
-    userType: 'seller',
-    email: 'seller@gametrust.com'
+    email: 'seller@gametrust.com',
+    role: 'seller'
   };
   
-  localStorage.setItem('mockUser', JSON.stringify(mockUser));
+  localStorage.setItem('auth_token', 'seller_token_123');
+  localStorage.setItem('current_user', JSON.stringify(testUser));
   localStorage.setItem('onboardingComplete', 'true');
   
   const onboardingData = {
@@ -93,7 +96,8 @@ export const setupSellerOnlyUser = () => {
  * Clears all user data and logs out
  */
 export const clearUserData = () => {
-  localStorage.removeItem('mockUser');
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('current_user');
   localStorage.removeItem('onboardingComplete');
   localStorage.removeItem('onboardingData');
   localStorage.removeItem('userRole');
@@ -108,15 +112,25 @@ export const clearUserData = () => {
  */
 export const debugUserState = () => {
   console.log('🔍 Current User State:');
-  console.log('mockUser:', localStorage.getItem('mockUser'));
+  console.log('auth_token:', localStorage.getItem('auth_token'));
+  console.log('current_user:', localStorage.getItem('current_user'));
   console.log('userRoles:', localStorage.getItem('userRoles'));
   console.log('userRole:', localStorage.getItem('userRole'));
   console.log('onboardingComplete:', localStorage.getItem('onboardingComplete'));
 };
 
+// Define interface for global testRoleSwitcher
+interface TestRoleSwitcher {
+  setupDualRoleUser: () => void;
+  setupBuyerOnlyUser: () => void;
+  setupSellerOnlyUser: () => void;
+  clearUserData: () => void;
+  debugUserState: () => void;
+}
+
 // Make functions available globally for easy testing in browser console
 if (typeof window !== 'undefined') {
-  (window as any).testRoleSwitcher = {
+  (window as Window & { testRoleSwitcher?: TestRoleSwitcher }).testRoleSwitcher = {
     setupDualRoleUser,
     setupBuyerOnlyUser,
     setupSellerOnlyUser,

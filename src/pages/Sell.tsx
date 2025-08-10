@@ -3,7 +3,54 @@ import { Upload, Camera, Shield, CheckCircle, ArrowRight, ArrowLeft } from 'luci
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Badge from '../components/UI/Badge';
-import { games } from '../data/mockData';
+// Games data - in a real app, this would come from an API
+const games = [
+  { 
+    id: 1, 
+    name: 'Fortnite', 
+    shortName: 'Fortnite',
+    icon: '🎮', 
+    category: 'Battle Royale',
+    description: 'Popular battle royale game',
+    platforms: ['PC', 'Console', 'Mobile']
+  },
+  { 
+    id: 2, 
+    name: 'Minecraft', 
+    shortName: 'Minecraft',
+    icon: '⛏️', 
+    category: 'Sandbox',
+    description: 'Creative sandbox building game',
+    platforms: ['PC', 'Console', 'Mobile']
+  },
+  { 
+    id: 3, 
+    name: 'Valorant', 
+    shortName: 'Valorant',
+    icon: '🎯', 
+    category: 'FPS',
+    description: 'Tactical first-person shooter',
+    platforms: ['PC']
+  },
+  { 
+    id: 4, 
+    name: 'League of Legends', 
+    shortName: 'LoL',
+    icon: '⚔️', 
+    category: 'MOBA',
+    description: 'Multiplayer online battle arena',
+    platforms: ['PC']
+  },
+  { 
+    id: 5, 
+    name: 'World of Warcraft', 
+    shortName: 'WoW',
+    icon: '🗡️', 
+    category: 'MMORPG',
+    description: 'Massively multiplayer online RPG',
+    platforms: ['PC']
+  }
+];
 
 const Sell: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);

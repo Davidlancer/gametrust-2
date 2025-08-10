@@ -2,26 +2,24 @@ import React, { useState } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
+import { apiService } from '../services/api';
 
 interface AuthProps {
   onNavigate: (page: string) => void;
 }
 
-// DEVELOPMENT MODE - Mock Authentication
-const MOCK_CREDENTIALS = {
-  buyer: {
-    email: 'buyer@gametrust.gg',
-    password: 'password123'
-  },
-  seller: {
-    email: 'test@gametrust.gg',
-    password: 'password123'
-  },
-  admin: {
-    email: 'admin@gametrust.com',
-    password: 'admin123'
-  }
-};
+interface UserData {
+  role: string;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface AuthResponse {
+  token?: string;
+  user?: UserData;
+}
 
 // const DEV_MODE = true; // Toggle for testing mode - currently unused
 
@@ -32,106 +30,205 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
     email: '',
     password: '',
     username: '',
+    firstName: '',
+    lastName: '',
     confirmPassword: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
+
+  // Validation functions
+  const validateField = (name: string, value: string): string => {
+    switch (name) {
+      case 'firstName': {
+        if (!value.trim()) return 'First name is required';
+        if (value.trim().length < 2) return 'First name must be at least 2 characters';
+        return '';
+      }
+      case 'lastName': {
+        if (!value.trim()) return 'Last name is required';
+        if (value.trim().length < 2) return 'Last name must be at least 2 characters';
+        return '';
+      }
+      case 'email': {
+        if (!value.trim()) return 'Email is required';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) return 'Please enter a valid email address';
+        return '';
+      }
+      case 'username': {
+        if (!value.trim()) return 'Username is required';
+        if (value.length < 3) return 'Username must be at least 3 characters';
+        if (value.length > 20) return 'Username must be less than 20 characters';
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Username can only contain letters, numbers, and underscores';
+        return '';
+      }
+      case 'password': {
+        if (!value) return 'Password is required';
+        if (value.length < 8) return 'Password must be at least 8 characters';
+        if (!/(?=.*[a-z])/.test(value)) return 'Password must contain at least one lowercase letter';
+        if (!/(?=.*[A-Z])/.test(value)) return 'Password must contain at least one uppercase letter';
+        if (!/(?=.*\d)/.test(value)) return 'Password must contain at least one number';
+        if (!/(?=.*[@$!%*?&])/.test(value)) return 'Password must contain at least one special character (@$!%*?&)';
+        return '';
+      }
+      case 'confirmPassword': {
+        if (!value) return 'Please confirm your password';
+        if (value !== formData.password) return 'Passwords do not match';
+        return '';
+      }
+      default:
+        return '';
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: {[key: string]: string} = {};
+    
+    if (isSignUp) {
+      errors.firstName = validateField('firstName', formData.firstName);
+      errors.lastName = validateField('lastName', formData.lastName);
+      errors.username = validateField('username', formData.username);
+      errors.confirmPassword = validateField('confirmPassword', formData.confirmPassword);
+    }
+    
+    errors.email = validateField('email', formData.email);
+    errors.password = validateField('password', formData.password);
+    
+    // Remove empty errors
+    Object.keys(errors).forEach(key => {
+      if (!errors[key]) delete errors[key];
+    });
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setFieldErrors({});
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsLoading(true);
-    setError('');
 
-    // Simulate loading delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    if (isSignUp) {
-      // Mock sign up - always successful
-
-
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Store mock user data
-      localStorage.setItem('mockUser', JSON.stringify({
-        email: formData.email,
-        username: formData.username,
-        isAuthenticated: true,
-        loginTime: new Date().toISOString()
-      }));
-      
-      // Clear onboarding for new user
-      localStorage.removeItem('userOnboarded');
-      localStorage.removeItem('onboardingData');
-      
-      setIsLoading(false);
-      onNavigate('onboarding');
-    } else {
-      // Mock sign in - check test credentials
-      const isBuyer = formData.email === MOCK_CREDENTIALS.buyer.email && formData.password === MOCK_CREDENTIALS.buyer.password;
-      const isSeller = formData.email === MOCK_CREDENTIALS.seller.email && formData.password === MOCK_CREDENTIALS.seller.password;
-      const isAdmin = formData.email === MOCK_CREDENTIALS.admin.email && formData.password === MOCK_CREDENTIALS.admin.password;
-      
-      if (isBuyer || isSeller || isAdmin) {
-        if (isAdmin) {
-          // Store admin user data
-          const fakeAdmin = {
-            id: "ADMIN001",
-            username: "admin",
-            role: "admin",
-            name: "Admin User",
-            email: "admin@gametrust.com",
-            isAuthenticated: true
-          };
-          localStorage.setItem('current_user', JSON.stringify(fakeAdmin));
-          
-          setIsLoading(false);
-          onNavigate('admin-dashboard');
+    try {
+      if (isSignUp) {
+        // Debug logging with masked password
+        console.log('Registration payload:', {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          username: formData.username,
+          password: '***'
+        });
+        
+        const response = await apiService.auth.register({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          username: formData.username,
+          password: formData.password
+        });
+        
+        // Store authentication token and user data
+        const responseData = response.data as AuthResponse;
+        if (responseData.token) {
+          localStorage.setItem('auth_token', responseData.token);
+          localStorage.setItem('current_user', JSON.stringify(responseData.user));
+          console.log('Registration successful:', { email: formData.email, username: formData.username });
+          onNavigate('onboarding');
         } else {
-          const userType = isBuyer ? 'buyer' : 'seller';
-          
-          // Store mock user data
-          localStorage.setItem('mockUser', JSON.stringify({
-            email: formData.email,
-            username: isBuyer ? 'BuyerUser' : 'TestUser',
-            userType,
-            isAuthenticated: true,
-            loginTime: new Date().toISOString()
-          }));
-          
-          // Store mock login flag
-          localStorage.setItem('mockLogin', 'true');
-          
-          setIsLoading(false);
-          
-          // Check if user has completed onboarding
-          const onboarded = localStorage.getItem('onboardingComplete');
-          if (onboarded === 'true') {
-            // Route based on user type
-            if (isBuyer) {
-              onNavigate('buyer-dashboard');
-            } else {
-              onNavigate('seller-dashboard');
-            }
-          } else {
-            onNavigate('onboarding');
-          }
+          throw new Error('Registration failed');
         }
       } else {
-        setError('Invalid credentials. Use buyer@gametrust.gg / password123, test@gametrust.gg / password123, or admin@gametrust.com / admin123');
-        setIsLoading(false);
+        const response = await apiService.auth.login({
+          email: formData.email,
+          password: formData.password
+        });
+        
+        // Store authentication token and user data
+        const responseData = response.data as AuthResponse;
+        if (responseData.token) {
+          localStorage.setItem('auth_token', responseData.token);
+          localStorage.setItem('current_user', JSON.stringify(responseData.user));
+          
+          console.log('Login successful:', { email: formData.email });
+          
+          // Route based on user role
+          const user = responseData.user;
+          if (user && user.role === 'admin') {
+            onNavigate('admin-dashboard');
+          } else if (user) {
+            // Check if user has completed onboarding
+            const onboarded = localStorage.getItem('onboardingComplete');
+            if (onboarded === 'true') {
+              if (user.role === 'buyer') {
+                onNavigate('buyer-dashboard');
+              } else {
+                onNavigate('seller-dashboard');
+              }
+            } else {
+              onNavigate('onboarding');
+            }
+          }
+        } else {
+          throw new Error('Invalid credentials');
+        }
       }
+    } catch (err: unknown) {
+      // Extract meaningful error message
+      const isAxiosError = err && typeof err === 'object' && 'response' in err;
+      let message = isSignUp ? 'Registration failed' : 'Login failed';
+      
+      if (isAxiosError) {
+        const axiosError = err as { response?: { data?: { message?: string } } };
+        message = axiosError.response?.data?.message || (err as Error).message || message;
+        
+        // Log full error for debugging
+        console.error(`${isSignUp ? 'Registration' : 'Login'} error (full):`, axiosError.response?.data || err);
+      } else {
+        // Network/preflight errors
+        message = 'Network error. Check server or CORS.';
+        console.error(`${isSignUp ? 'Registration' : 'Login'} error:`, err);
+      }
+      
+      setError(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+    
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: ''
+      });
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const error = validateField(name, value);
+    if (error) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: error
+      });
+    }
   };
 
   return (
@@ -203,23 +300,73 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Username
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Choose a username"
-                    required
-                  />
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                        fieldErrors.firstName ? 'border-red-500' : 'border-gray-600'
+                      }`}
+                      placeholder="First name"
+                      required
+                    />
+                    {fieldErrors.firstName && (
+                      <p className="mt-1 text-sm text-red-400">{fieldErrors.firstName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                        fieldErrors.lastName ? 'border-red-500' : 'border-gray-600'
+                      }`}
+                      placeholder="Last name"
+                      required
+                    />
+                    {fieldErrors.lastName && (
+                      <p className="mt-1 text-sm text-red-400">{fieldErrors.lastName}</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      className={`w-full pl-10 pr-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                        fieldErrors.username ? 'border-red-500' : 'border-gray-600'
+                      }`}
+                      placeholder="Choose a username"
+                      required
+                    />
+                  </div>
+                  {fieldErrors.username && (
+                    <p className="mt-1 text-sm text-red-400">{fieldErrors.username}</p>
+                  )}
+                </div>
+              </>
             )}
 
             <div>
@@ -233,11 +380,17 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  onBlur={handleBlur}
+                  className={`w-full pl-10 pr-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                    fieldErrors.email ? 'border-red-500' : 'border-gray-600'
+                  }`}
                   placeholder="Enter your email"
                   required
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="mt-1 text-sm text-red-400">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -251,7 +404,10 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  onBlur={handleBlur}
+                  className={`w-full pl-10 pr-12 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                    fieldErrors.password ? 'border-red-500' : 'border-gray-600'
+                  }`}
                   placeholder="Enter your password"
                   required
                 />
@@ -263,6 +419,9 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-sm text-red-400">{fieldErrors.password}</p>
+              )}
             </div>
 
             {isSignUp && (
@@ -277,11 +436,17 @@ const Auth: React.FC<AuthProps> = ({ onNavigate }) => {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    onBlur={handleBlur}
+                    className={`w-full pl-10 pr-4 py-3 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                      fieldErrors.confirmPassword ? 'border-red-500' : 'border-gray-600'
+                    }`}
                     placeholder="Confirm your password"
                     required
                   />
                 </div>
+                {fieldErrors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-400">{fieldErrors.confirmPassword}</p>
+                )}
               </div>
             )}
 

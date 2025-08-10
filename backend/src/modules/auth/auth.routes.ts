@@ -1,32 +1,57 @@
 import { Router } from 'express';
-import { AuthController } from './auth.controller';
-import { protect } from './auth.middleware';
+import {
+  register,
+  login,
+  logout,
+  refreshToken,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+  getProfile,
+  updateProfile,
+  changePassword
+} from './auth.controller';
+import {
+  authenticate,
+  requireEmailVerification,
+  sensitiveOperationLimit
+} from './auth.middleware';
+import {
+  validateRegister,
+  validateLogin,
+  validateForgotPassword,
+  validateResetPassword,
+  validateVerifyEmail,
+  validateChangePassword,
+  validateUpdateProfile
+} from './auth.validation';
+import { handleValidationErrors } from '../../middlewares/handleValidationErrors';
 
 const router = Router();
 
 // Public routes
-router.post('/register', AuthController.register);
-router.post('/login', AuthController.login);
-router.post('/refresh', AuthController.refreshToken);
+router.post('/register', validateRegister, handleValidationErrors, register);
+router.post('/login', validateLogin, handleValidationErrors, login);
+router.post('/logout', logout);
+router.post('/refresh-token', refreshToken);
+router.post('/forgot-password', validateForgotPassword, handleValidationErrors, forgotPassword);
+router.post('/reset-password', validateResetPassword, handleValidationErrors, resetPassword);
+router.post('/verify-email', validateVerifyEmail, handleValidationErrors, verifyEmail);
 
-// Social authentication routes
-router.post('/google', AuthController.googleAuth);
-router.post('/apple', AuthController.appleAuth);
+// Protected routes (require authentication)
+router.use(authenticate);
 
-// Protected routes
-router.post('/logout', protect, AuthController.logout);
-router.post('/logout-all', protect, AuthController.logoutAll);
-router.get('/me', protect, AuthController.getProfile);
-router.put('/me', protect, AuthController.updateProfile);
-router.get('/sessions', protect, AuthController.getSessions);
-router.delete('/sessions/:sessionId', protect, AuthController.deleteSession);
+// Profile routes
+router.get('/profile', getProfile);
+router.put('/profile', validateUpdateProfile, handleValidationErrors, updateProfile);
 
-// Email verification
-router.post('/verify-email', protect, AuthController.sendVerificationEmail);
-router.post('/verify-email/confirm', AuthController.verifyEmail);
-
-// Password reset
-router.post('/forgot-password', AuthController.forgotPassword);
-router.post('/reset-password', AuthController.resetPassword);
+// Password change (requires email verification)
+router.post('/change-password', 
+  requireEmailVerification,
+  sensitiveOperationLimit,
+  validateChangePassword,
+  handleValidationErrors,
+  changePassword
+);
 
 export default router;

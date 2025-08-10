@@ -7,7 +7,8 @@ import Button from '../components/UI/Button';
 import ComponentTransition from '../components/UI/ComponentTransition';
 import ListingCard from '../components/ListingCard';
 import { useLoading } from '../context/LoadingContext';
-import { featuredListings, games } from '../data/mockData';
+import { apiService } from '../services/api';
+import { GameAccount, Game } from '../types';
 import { FilterOptions } from '../types';
 
 interface MarketplaceProps {
@@ -23,6 +24,33 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [listings, setListings] = useState<GameAccount[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [listingsResponse, gamesResponse] = await Promise.all([
+          apiService.products.getAll(),
+          apiService.products.getAll({ type: 'games' }) // Assuming games endpoint
+        ]);
+        setListings(listingsResponse.data || []);
+        setGames(gamesResponse.data || []);
+      } catch (err) {
+        console.error('Error fetching marketplace data:', err);
+        setError('Failed to load marketplace data');
+        setListings([]);
+        setGames([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Handle query parameters on component mount
   useEffect(() => {
@@ -55,7 +83,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
   };
 
   // Enhanced filtering logic
-  const filteredListings = featuredListings.filter(listing => {
+  const filteredListings = listings.filter(listing => {
     const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          listing.game.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          listing.seller.username.toLowerCase().includes(searchTerm.toLowerCase());
@@ -89,6 +117,50 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
     }
   });
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 pt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-white mb-4">Marketplace</h1>
+            <p className="text-lg text-gray-400">Loading listings...</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="bg-gray-800 rounded-lg shadow-md p-6">
+                  <div className="h-48 bg-gray-700 rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-700 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-700 rounded w-3/4 mb-4"></div>
+                  <div className="h-8 bg-gray-700 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 pt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-white mb-4">Marketplace</h1>
+            <p className="text-lg text-red-400 mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -105,15 +177,15 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50">
-                <div className="text-2xl font-bold text-white">{featuredListings.length}</div>
+                <div className="text-2xl font-bold text-white">{listings.length}</div>
                 <div className="text-sm text-gray-400">Total Listings</div>
               </div>
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50">
-                <div className="text-2xl font-bold text-green-400">{featuredListings.filter(l => l.isVerified).length}</div>
+                <div className="text-2xl font-bold text-green-400">{listings.filter(l => l.isVerified).length}</div>
                 <div className="text-sm text-gray-400">Verified</div>
               </div>
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50">
-                <div className="text-2xl font-bold text-blue-400">{featuredListings.filter(l => l.hasEscrow).length}</div>
+                <div className="text-2xl font-bold text-blue-400">{listings.filter(l => l.hasEscrow).length}</div>
                 <div className="text-sm text-gray-400">Escrow Protected</div>
               </div>
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 border border-gray-700/50">
@@ -345,29 +417,39 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigate }) => {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* View Mode Toggle */}
+            {/* View Mode Toggle - Mobile Optimized */}
             <div className="flex items-center bg-gray-800/50 rounded-lg p-1 border border-gray-700/50">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  viewMode === 'grid' 
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-                }`}
+                className={`
+                  p-3 md:p-2 rounded-md transition-all duration-200 
+                  min-h-[44px] min-w-[44px] flex items-center justify-center
+                  ${
+                    viewMode === 'grid' 
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  }
+                `}
                 title="Grid view"
+                aria-label="Switch to grid view"
               >
-                <Grid className="h-4 w-4" />
+                <Grid className="h-5 w-5 md:h-4 md:w-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-all duration-200 ${
-                  viewMode === 'list' 
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-                }`}
+                className={`
+                  p-3 md:p-2 rounded-md transition-all duration-200 
+                  min-h-[44px] min-w-[44px] flex items-center justify-center
+                  ${
+                    viewMode === 'list' 
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  }
+                `}
                 title="List view"
+                aria-label="Switch to list view"
               >
-                <List className="h-4 w-4" />
+                <List className="h-5 w-5 md:h-4 md:w-4" />
               </button>
             </div>
           </div>

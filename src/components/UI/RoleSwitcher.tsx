@@ -126,9 +126,9 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ onNavigate, onLogout, curre
 
   const getUsername = () => {
     try {
-      const mockUser = localStorage.getItem('mockUser');
-      if (mockUser) {
-        const userData = JSON.parse(mockUser);
+      const currentUser = localStorage.getItem('current_user');
+      if (currentUser) {
+        const userData = JSON.parse(currentUser);
         return userData.username || '@User';
       }
     } catch (error) {

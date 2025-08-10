@@ -4,6 +4,51 @@
 
 /* Mobile Optimizations */
 @layer utilities {
+  /* Mobile-optimized toggle styles */
+  .mobile-toggle {
+    min-height: 44px;
+    min-width: 44px;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    touch-action: manipulation;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  @media (max-width: 768px) {
+    .toggle-switch {
+      height: 28px !important;
+      width: 48px !important;
+    }
+    
+    .toggle-switch .toggle-thumb {
+      height: 20px !important;
+      width: 20px !important;
+    }
+    
+    .toggle-group {
+      gap: 12px;
+    }
+    
+    .toggle-icon {
+      width: 20px !important;
+      height: 20px !important;
+    }
+    
+    .mobile-toggle:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+    }
+    
+    .mobile-toggle:active {
+      transform: scale(0.95);
+    }
+  }
+  
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .mobile-toggle {
+      min-height: 40px;
+      min-width: 40px;
+    }
+  }
   /* Smooth scrolling for mobile */
   .smooth-scroll {
     -webkit-overflow-scrolling: touch;

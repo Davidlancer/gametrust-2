@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Star, 
-  Shield, 
   Calendar, 
   MapPin, 
   MessageCircle,
@@ -12,12 +11,10 @@ import {
   Clock,
   Package,
   TrendingUp,
-  Filter,
   Grid,
   List,
   Heart,
   UserPlus,
-  Award,
   AlertTriangle,
   Eye,
   ThumbsUp,
@@ -28,7 +25,6 @@ import Button from '../components/UI/Button';
 import Badge from '../components/UI/Badge';
 import ChatPopup from '../components/UI/ChatPopup';
 import ErrorBoundary from '../components/UI/ErrorBoundary';
-import { featuredListings, mockSeller, mockTransactions, mockCurrentUser, mockReviews, mockReportedSellers } from '../data/mockData';
 import StarRating from '../components/UI/StarRating';
 import Modal from '../components/UI/Modal';
 
@@ -53,10 +49,47 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
   const [reportComment, setReportComment] = useState('');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const [hasReportedSeller, setHasReportedSeller] = useState(false);
+  const [seller, setSeller] = useState<{
+    id: string;
+    username: string;
+    displayName: string;
+    avatar: string;
+    isVerified: boolean;
+    location: string;
+    joinedDate: string;
+    lastSeen: string;
+  } | null>(null);
+  const [sellerListings, setSellerListings] = useState<unknown[]>([]);
+  const [reviews, setReviews] = useState<unknown[]>([]);
 
-  // Mock data - in real app, fetch from API
-  const seller = mockSeller;
-  const sellerListings = featuredListings.filter(listing => listing.seller.id === sellerId);
+  // Fetch seller data on component mount
+  useEffect(() => {
+    const fetchSellerData = async () => {
+      try {
+        setIsLoading(true);
+        // In a real app, these would be separate API calls
+        const mockSellerData = {
+          id: sellerId,
+          username: 'ProGamer2023',
+          displayName: 'Elite Gaming Pro',
+          avatar: '/api/placeholder/80/80',
+          isVerified: true,
+          location: 'United States',
+          joinedDate: 'January 2023',
+          lastSeen: '2 hours ago'
+        };
+        setSeller(mockSellerData);
+        setSellerListings([]);
+        setReviews([]);
+      } catch {
+        console.error('Failed to load seller data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSellerData();
+  }, [sellerId]);
   
   const sellerStats = {
     totalSales: 134,
@@ -73,22 +106,12 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
 
   // Check if current user can leave a review
   const canLeaveReview = () => {
-    if (!mockCurrentUser.isAuthenticated) return false;
+    const authToken = localStorage.getItem('auth_token');
+    if (!authToken) return false;
     
-    // Check if user has completed transactions with this seller
-    const userTransactions = mockTransactions.filter(
-      txn => txn.buyerId === mockCurrentUser.id && 
-             txn.sellerId === sellerId && 
-             txn.status === 'completed' && 
-             txn.escrowReleased && 
-             !txn.hasReviewed
-    );
-    
-    return userTransactions.length > 0;
+    // In a real app, this would check completed transactions
+    return true;
   };
-
-  // Get reviews for this seller
-  const reviews = mockReviews.filter(review => review.sellerId === sellerId);
   
   // Calculate time ago helper
   const getTimeAgo = (dateString: string) => {
@@ -121,7 +144,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
       
       // In real app, make POST request to /api/review
       console.log('Review submitted:', {
-        buyerId: mockCurrentUser.id,
+        buyerId: JSON.parse(localStorage.getItem('current_user') || '{}').id || 'USER_001',
         sellerId,
         rating: reviewRating,
         comment: reviewComment
@@ -133,7 +156,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
       setShowReviewForm(false);
       
       alert('Review submitted successfully!');
-    } catch (error) {
+    } catch {
       alert('Failed to submit review. Please try again.');
     } finally {
       setIsSubmittingReview(false);
@@ -142,11 +165,11 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
 
   // Check if user has already reported this seller
   const checkIfReported = () => {
-    if (!mockCurrentUser.isAuthenticated) return false;
+    const authToken = localStorage.getItem('auth_token');
+    if (!authToken) return false;
     
-    const existingReport = mockReportedSellers.find(
-      report => report.reporterId === mockCurrentUser.id && report.sellerId === sellerId
-    );
+    // In a real app, this would check if user has already reported this seller
+    const existingReport = false;
     
     return !!existingReport;
   };
@@ -168,7 +191,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
       
       // In real app, make POST request to /api/report-seller
       const reportData = {
-        reporterId: mockCurrentUser.id,
+        reporterId: JSON.parse(localStorage.getItem('current_user') || '{}').id || 'USER_001',
         sellerId,
         reason: reportReason,
         comment: reportComment,
@@ -184,7 +207,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
       setHasReportedSeller(true);
       
       alert('Report submitted successfully. Our moderators will review it.');
-    } catch (error) {
+    } catch {
       alert('Failed to submit report. Please try again.');
     } finally {
       setIsSubmittingReport(false);
@@ -202,7 +225,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
   }, []);
 
   const filteredListings = gameFilter 
-    ? sellerListings.filter(listing => listing.game === gameFilter)
+    ? sellerListings.filter((listing: any) => listing.game === gameFilter)
     : sellerListings;
 
   const getDisputeRateColor = (rate: number) => {
@@ -247,11 +270,11 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
               {/* Profile Picture */}
               <div className="relative">
                 <img
-                  src={seller.avatar}
-                  alt={seller.username}
+                  src={seller?.avatar || '/api/placeholder/80/80'}
+                  alt={seller?.username || 'Seller'}
                   className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-gray-700 shadow-xl"
                 />
-                {seller.isVerified && (
+                {seller?.isVerified && (
                   <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-2 border-4 border-gray-800">
                     <CheckCircle className="h-4 w-4 text-white" />
                   </div>
@@ -263,8 +286,8 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                   <div>
                     <div className="flex items-center space-x-3 mb-2">
-                      <h1 className="text-2xl md:text-3xl font-bold text-white">{seller.username}</h1>
-                      {seller.isVerified && (
+                      <h1 className="text-2xl md:text-3xl font-bold text-white">{seller?.username || 'Unknown Seller'}</h1>
+                      {seller?.isVerified && (
                         <Badge type="verified" text="Verified Seller" />
                       )}
                     </div>
@@ -320,7 +343,8 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
                       variant="ghost" 
                       size="md"
                       onClick={() => {
-                        if (!mockCurrentUser.isAuthenticated) {
+                        const authToken = localStorage.getItem('auth_token');
+    if (!authToken) {
                           alert('Please log in to report a seller');
                           return;
                         }
@@ -467,7 +491,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
             ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
             : 'space-y-4'
           }>
-            {filteredListings.map((listing) => (
+            {filteredListings.map((listing: any) => (
               <Card key={listing.id} hover className="group">
                 <div className={viewMode === 'list' ? 'flex space-x-6' : ''}>
                   {/* Image */}
@@ -501,7 +525,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {listing.features.slice(0, 3).map((feature, index) => (
+                      {listing.features.slice(0, 3).map((feature: string, index: number) => (
                         <span 
                           key={index}
                           className="px-2 py-1 bg-gray-700/50 text-gray-300 text-xs rounded-md"
@@ -626,7 +650,7 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
           {showReviews && (
             <div className="space-y-6">
               {reviews.length > 0 ? (
-                reviews.map((review) => (
+                reviews.map((review: any) => (
                   <div key={review.id} className="border-b border-gray-700 pb-6 last:border-b-0">
                     <div className="flex items-start space-x-4">
                       <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
@@ -714,9 +738,9 @@ const SellerProfile: React.FC<SellerProfileProps> = ({ sellerId = '1', onNavigat
           isOpen={isChatOpen}
           onClose={() => setIsChatOpen(false)}
           seller={{
-            id: seller.id,
-            username: seller.username,
-            avatar: seller.avatar,
+            id: seller?.id || '',
+            username: seller?.username || 'Unknown',
+            avatar: seller?.avatar || '/api/placeholder/80/80',
             isOnline: true,
             lastSeen: sellerStats.lastSeen
           }}

@@ -23,9 +23,10 @@ import Badge from '../components/UI/Badge';
 import Modal from '../components/UI/Modal';
 import PaymentSuccessModal from '../components/UI/PaymentSuccessModal';
 import ChatPopup from '../components/UI/ChatPopup';
-import { featuredListings } from '../data/mockData';
 import { useEscrow } from '../hooks/useEscrow';
 import { alertUtils } from '../utils/alertMigration';
+import { apiService } from '../services/api';
+import { GameAccount } from '../types';
 
 interface ListingDetailsProps {
   listingId?: string;
@@ -40,24 +41,43 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
   const [showChatPopup, setShowChatPopup] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [listing, setListing] = useState<GameAccount | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { createEscrowTransaction, escrow } = useEscrow();
 
-
-  // Mock data - in real app, fetch from API
-  const listing = featuredListings.find(l => l.id === listingId) || featuredListings[0];
-
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchListing = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await apiService.products.getAll();
+        const foundListing = response.find((l: GameAccount) => l.id === listingId);
+        if (foundListing) {
+          setListing(foundListing);
+        } else {
+          setError('Listing not found');
+        }
+      } catch (err) {
+        console.error('Error fetching listing:', err);
+        setError('Failed to load listing');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchListing();
+  }, [listingId]);
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % listing.images.length);
+    if (listing?.images) {
+      setCurrentImageIndex((prev) => (prev + 1) % listing.images.length);
+    }
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + listing.images.length) % listing.images.length);
+    if (listing?.images) {
+      setCurrentImageIndex((prev) => (prev - 1 + listing.images.length) % listing.images.length);
+    }
   };
 
   const getSocialLinkageStatus = (platform: string, isLinked: boolean, isUnlinkable: boolean) => {
@@ -68,17 +88,19 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
 
   const handleBuyNow = () => {
     try {
-      // Check if user is authenticated (in a real app, this would be from auth context)
-      const mockUser = JSON.parse(localStorage.getItem('mockUser') || '{}');
-      if (!mockUser.isAuthenticated) {
+      // Check if user is authenticated
+      const authToken = localStorage.getItem('auth_token');
+      const currentUser = localStorage.getItem('current_user');
+      if (!authToken || !currentUser) {
         alertUtils.error('Please log in to purchase this account.');
         onNavigate('auth');
         return;
       }
 
+      const user = JSON.parse(currentUser);
       // Create escrow transaction
       const escrowData = {
-        buyerId: mockUser.id || 'BUYER_001',
+        buyerId: user.id || 'BUYER_001',
         sellerId: listing.seller.id,
         accountId: listing.id,
         listingTitle: listing.title,
@@ -104,8 +126,8 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listingId = '1', onNavi
   const handleChatWithSeller = () => {
     try {
       // Check if user is authenticated
-      const mockUser = JSON.parse(localStorage.getItem('mockUser') || '{}');
-      if (!mockUser.isAuthenticated) {
+      const authToken = localStorage.getItem('auth_token');
+      if (!authToken) {
         alertUtils.error('Please log in to chat with the seller.');
         onNavigate('auth');
         return;

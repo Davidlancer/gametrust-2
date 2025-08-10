@@ -72,17 +72,23 @@ function App() {
     setGlobalToastManager({ addToast });
   }, [addToast]);
 
-  // Initialize mock user for escrow functionality
+  // Check authentication status on app load
   useEffect(() => {
-    const mockUser = {
-      id: 'USER_001',
-      isAuthenticated: true,
-      role: 'buyer',
-      name: 'Test User',
-      email: 'test@gametrust.com'
-    };
-    localStorage.setItem('mockUser', JSON.stringify(mockUser));
-    setIsAuthenticated(true);
+    const token = localStorage.getItem('auth_token');
+    const currentUser = localStorage.getItem('current_user');
+    
+    if (token && currentUser) {
+      try {
+        const user = JSON.parse(currentUser);
+        setIsAuthenticated(true);
+        setUserType(user.role || 'buyer');
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('current_user');
+      }
+    }
   }, []);
 
   const handleNavigate = (page: string, id?: string) => {
@@ -148,7 +154,8 @@ function App() {
     setIsAuthenticated(false);
     setUserOnboarded(false);
     setOnboardingData(null);
-    localStorage.removeItem('mockUser');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('current_user');
     localStorage.removeItem('onboardingComplete');
     localStorage.removeItem('onboardingData');
     localStorage.removeItem('userRole');
@@ -207,14 +214,21 @@ function App() {
 
   // Check authentication and onboarding status on app load
   useEffect(() => {
-    // Simulate initial app loading with authentication check
+    // Initialize app with authentication check
     const initializeApp = async () => {
-      const mockUser = localStorage.getItem('mockUser');
-      if (mockUser) {
-        const userData = JSON.parse(mockUser);
-        if (userData.isAuthenticated) {
+      const token = localStorage.getItem('auth_token');
+      const currentUser = localStorage.getItem('current_user');
+      
+      if (token && currentUser) {
+        try {
+          const userData = JSON.parse(currentUser);
           setIsAuthenticated(true);
-          setUserType(userData.userType || 'buyer');
+          setUserType(userData.role || 'buyer');
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          // Clear invalid data
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('current_user');
         }
       }
       
@@ -236,10 +250,14 @@ function App() {
   // Update user type when authentication state changes
   useEffect(() => {
     if (isAuthenticated) {
-      const mockUser = localStorage.getItem('mockUser');
-      if (mockUser) {
-        const userData = JSON.parse(mockUser);
-        setUserType(userData.userType || 'buyer');
+      const currentUser = localStorage.getItem('current_user');
+      if (currentUser) {
+        try {
+          const userData = JSON.parse(currentUser);
+          setUserType(userData.role || 'buyer');
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
       }
     }
   }, [isAuthenticated]);
